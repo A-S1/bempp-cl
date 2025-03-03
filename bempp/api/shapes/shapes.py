@@ -75,6 +75,41 @@ def __generate_grid_from_geo_string(geo_string):
     os.remove(msh_name)
     return grid
 
+def wire(corners, h=0.1, a=0.1):
+    """
+    Create a thin wire.
+
+    Parameters
+    ----------
+    corners : np.ndarray
+        A (2 x 3) array that defines the two endpoints of the wire.
+    h : float
+        A floating point number specifying the mesh size.
+    a : float
+        A floating point number specifying the wire radius.
+    
+    Output
+    -------
+    grid : bempp.Grid
+        A structured grid representing the wire.
+
+    Note
+    ----
+    The radius 'a' is declared in the geo string but is not automatically stored in
+    the grid. If the simulation requires the wire radius (for integration, for example),
+    you will need to modify the grid-generation routine (__generate_grid_from_geo_string)
+    to extract and attach this parameter to the grid.
+    """
+    stub = f"""
+    cl = {h};
+    a = {a}; // Wire radius parameter declared, but not used automatically by the mesher.
+    Point(1) = {{ {corners[0,0]}, {corners[0,1]}, {corners[0,2]}, cl }};
+    Point(2) = {{ {corners[1,0]}, {corners[1,1]}, {corners[1,2]}, cl }};
+    Line(1) = {{1,2}};
+    Physical Curve(1) = {{1}};
+    Mesh.Algorithm = 6;
+    """
+    return __generate_grid_from_geo_string(stub)
 
 def screen(corners, h=0.1):
     """
