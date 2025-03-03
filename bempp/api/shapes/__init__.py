@@ -13,3 +13,4 @@ from .shapes import screen
 from .shapes import cylinders
 from .shapes import multitrace_ellipsoid
 from .shapes import multitrace_sphere
+from .shapes import wire
