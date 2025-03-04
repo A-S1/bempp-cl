@@ -18,20 +18,38 @@ def import_grid(filename):
     from bempp.api.grid.grid import Grid
 
     mesh = _meshio.read(filename)
-
     vertices = mesh.points.T
-    elements = mesh.cells_dict["triangle"].T.astype("uint32")
 
-    try:
-        domain_indices = mesh.cell_data_dict["gmsh:physical"]["triangle"]
-    except:  # noqa: E722
-        domain_indices = None
-
-    if domain_indices is None or _np.all(domain_indices == 0):
+    # Try to use triangle elements if available
+    if "triangle" in mesh.cells_dict:
+        elements = mesh.cells_dict["triangle"].T.astype("uint32")
         try:
-            domain_indices = mesh.cell_data_dict["gmsh:geometrical"]["triangle"]
-        except:  # noqa: E722
-            pass
+            domain_indices = mesh.cell_data_dict["gmsh:physical"]["triangle"]
+        except Exception:
+            domain_indices = None
+
+        if domain_indices is None or _np.all(domain_indices == 0):
+            try:
+                domain_indices = mesh.cell_data_dict["gmsh:geometrical"]["triangle"]
+            except Exception:
+                domain_indices = None
+
+    # Otherwise, look for line elements (used for wires)
+    elif "line" in mesh.cells_dict:
+        elements = mesh.cells_dict["line"].T.astype("uint32")
+        try:
+            domain_indices = mesh.cell_data_dict["gmsh:physical"]["line"]
+        except Exception:
+            domain_indices = None
+
+        if domain_indices is None or _np.all(domain_indices == 0):
+            try:
+                domain_indices = mesh.cell_data_dict["gmsh:geometrical"]["line"]
+            except Exception:
+                domain_indices = None
+
+    else:
+        raise ValueError("Grid must contain either 'triangle' or 'line' cells.")
 
     return Grid(vertices, elements, domain_indices=domain_indices)
 
