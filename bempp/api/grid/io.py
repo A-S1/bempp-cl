@@ -20,7 +20,6 @@ def import_grid(filename):
     mesh = _meshio.read(filename)
     vertices = mesh.points.T
 
-    # Try to use triangle elements if available
     if "triangle" in mesh.cells_dict:
         elements = mesh.cells_dict["triangle"].T.astype("uint32")
         try:
@@ -34,7 +33,6 @@ def import_grid(filename):
             except Exception:
                 domain_indices = None
 
-    # Otherwise, look for line elements (used for wires)
     elif "line" in mesh.cells_dict:
         elements = mesh.cells_dict["line"].T.astype("uint32")
         try:
