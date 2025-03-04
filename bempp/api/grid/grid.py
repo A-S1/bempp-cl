@@ -987,8 +987,9 @@ def get_element_to_vertex_matrix(vertices, elements):
 
     number_of_elements = elements.shape[1]
     number_of_vertices = vertices.shape[1]
+    n_vertices_per_element = elements.shape[0] 
     vertex_indices = _np.ravel(elements, order="F")
-    vertex_element_indices = _np.repeat(_np.arange(number_of_elements), 3)
+    vertex_element_indices = _np.repeat(_np.arange(number_of_elements), n_vertices_per_element)
     data = _np.ones(len(vertex_indices), dtype="uint32")
 
     return csr_matrix(

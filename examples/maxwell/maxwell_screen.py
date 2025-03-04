@@ -59,6 +59,8 @@
 import bempp.api
 import numpy as np
 
+from IPython import get_ipython
+
 # We next define the wavenumber of the problem.
 
 wavelength = 1
@@ -77,7 +79,7 @@ grid1 = bempp.api.shapes.screen(corners1)
 grid2 = bempp.api.shapes.screen(corners2)
 grid3 = bempp.api.shapes.screen(corners3)
 
-grid4 = bempp.api.shapes.wire(wire_1, 0.1, 0.1)
+# grid4 = bempp.api.shapes.wire(wire_1, 0.1, 0.1)
 grid = bempp.api.grid.union([grid1, grid2, grid3])
 
 # -
