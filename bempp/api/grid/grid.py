@@ -611,12 +611,12 @@ class Grid(object):
         self._volumes = volumes
         self._normals = normals
         self._jacobians = _np.swapaxes(
-            _np.reshape(jacobians, (self.number_of_elements, 2, 3)), 1, 2
+            _np.reshape(jacobians, (self.number_of_elements, n_e, 3)), 1, 2
         )
         self._diameters = diameters
         self._centroids = centroids
 
-        jac_transpose_jac = _np.empty((self.number_of_elements, 2, 2), dtype="float64")
+        jac_transpose_jac = _np.empty((self.number_of_elements, n_e, n_e), dtype="float64")
         for index in range(self.number_of_elements):
             jac_transpose_jac[index] = self.jacobians[index].T.dot(
                 self.jacobians[index]
@@ -626,7 +626,7 @@ class Grid(object):
         jac_transpose_jac_inv = _np.linalg.inv(jac_transpose_jac)
 
         self._jacobian_inverse_transposed = _np.empty(
-            (self.number_of_elements, 3, 2), dtype="float64"
+            (self.number_of_elements, 3, n_e), dtype="float64"
         )
 
         for index in range(self.number_of_elements):
