@@ -645,12 +645,7 @@ class Grid(object):
         from scipy.sparse import csr_matrix
 
         element_edges = self.element_edges
-        n_v = self.elements.shape[0]
-
-        if n_v == 3:
-            n_e = 3
-        elif n_v == 2:
-            n_e = 1
+        n_e = self.elements.shape[0]
 
 
         number_of_elements = self.number_of_elements
