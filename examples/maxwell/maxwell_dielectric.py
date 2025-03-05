@@ -253,4 +253,5 @@ cross_section = 10 * np.log10(4 * np.pi * np.sum(np.abs(far_field) ** 2, axis=0)
 plt.plot(angles * 180 / np.pi, cross_section)
 plt.title("Scattering Cross Section [dB]")
 _ = plt.xlabel("Angle (Degrees)")
+plt.savefig("example-maxwell_dielectric_rcs.png")
 # -
