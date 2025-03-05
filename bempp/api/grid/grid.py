@@ -574,18 +574,20 @@ class Grid(object):
     def _compute_geometric_quantities(self):
         """Compute geometric quantities for the grid."""
         element_vertices = self.vertices.T[self.elements.flatten(order="F")]
-        indexptr = 3 * _np.arange(self.number_of_elements)
-        indices = _np.repeat(indexptr, 2) + _np.tile([1, 2], self.number_of_elements)
+        n_v = self.elements.shape[0]
+        n_e = n_v - 1
+        indexptr = n_v * _np.arange(self.number_of_elements)
+        indices = _np.repeat(indexptr, n_e) + _np.tile(_np.arange(1, n_e+1), self.number_of_elements)
 
         centroids = (
             1.0
-            / 3
+            / n_v
             * _np.sum(
-                _np.reshape(element_vertices, (self.number_of_elements, 3, 3)), axis=1
+                _np.reshape(element_vertices, (self.number_of_elements, n_v, 3)), axis=1
             )
         )
 
-        jacobians = (element_vertices - _np.repeat(element_vertices[::3], 3, axis=0))[
+        jacobians = (element_vertices - _np.repeat(element_vertices[::n_v], n_v, axis=0))[
             indices
         ]
 
