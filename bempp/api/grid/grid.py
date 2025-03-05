@@ -1514,15 +1514,16 @@ def _numba_enumerate_edges(elements, edge_tuple_to_index):
 
     """
     edges = []
-
+    
+    n_v = elements.shape[0]
     number_of_elements = elements.shape[1]
-    element_edges = _np.zeros((3, number_of_elements), dtype=_np.int32)
+    element_edges = _np.zeros((n_v, number_of_elements), dtype=_np.int32)
 
     number_of_edges = 0
 
     for elem_index in range(number_of_elements):
         elem = elements[:, elem_index]
-        for local_index in range(3):
+        for local_index in range(n_v):
             edge_tuple = _vertices_from_edge_index(elem, local_index)
             if edge_tuple not in edge_tuple_to_index:
                 edge_index = number_of_edges
