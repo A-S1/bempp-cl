@@ -646,6 +646,7 @@ class Grid(object):
 
         element_edges = self.element_edges
         n_e = element_edges.shape[0]
+        print(n_e)
 
         number_of_elements = self.number_of_elements
         number_of_edges = self.number_of_edges
