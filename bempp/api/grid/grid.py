@@ -645,13 +645,14 @@ class Grid(object):
         from scipy.sparse import csr_matrix
 
         element_edges = self.element_edges
+        n_e = element_edges.shape[0]
 
         number_of_elements = self.number_of_elements
         number_of_edges = self.number_of_edges
         number_of_vertices = self.number_of_vertices
         edge_indices = _np.ravel(element_edges, order="F")
-        repeated_element_indices = _np.repeat(_np.arange(number_of_elements), 3)
-        data = _np.ones(3 * number_of_elements, dtype="uint32")
+        repeated_element_indices = _np.repeat(_np.arange(number_of_elements), n_e)
+        data = _np.ones(n_e * number_of_elements, dtype="uint32")
 
         element_to_edge = csr_matrix(
             (data, (repeated_element_indices, edge_indices)),
