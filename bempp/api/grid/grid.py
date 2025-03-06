@@ -574,20 +574,20 @@ class Grid(object):
     def _compute_geometric_quantities(self):
         """Compute geometric quantities for the grid."""
         element_vertices = self.vertices.T[self.elements.flatten(order="F")]
-        n_v = self.elements.shape[0]
-        n_e = n_v - 1
-        indexptr = n_v * _np.arange(self.number_of_elements)
-        indices = _np.repeat(indexptr, n_e) + _np.tile(_np.arange(1, n_e+1), self.number_of_elements)
+        n_vertices_per_element = self.elements.shape[0]
+        n_edges_per_element = n_vertices_per_element - 1
+        indexptr = n_vertices_per_element * _np.arange(self.number_of_elements)
+        indices = _np.repeat(indexptr, n_edges_per_element) + _np.tile(_np.arange(1, n_edges_per_element+1), self.number_of_elements)
 
         centroids = (
             1.0
-            / n_v
+            / n_vertices_per_element
             * _np.sum(
-                _np.reshape(element_vertices, (self.number_of_elements, n_v, 3)), axis=1
+                _np.reshape(element_vertices, (self.number_of_elements, n_vertices_per_element, 3)), axis=1
             )
         )
 
-        jacobians = (element_vertices - _np.repeat(element_vertices[::n_v], n_v, axis=0))[
+        jacobians = (element_vertices - _np.repeat(element_vertices[::n_vertices_per_element], n_vertices_per_element, axis=0))[
             indices
         ]
 
@@ -611,12 +611,12 @@ class Grid(object):
         self._volumes = volumes
         self._normals = normals
         self._jacobians = _np.swapaxes(
-            _np.reshape(jacobians, (self.number_of_elements, n_e, 3)), 1, 2
+            _np.reshape(jacobians, (self.number_of_elements, n_edges_per_element, 3)), 1, 2
         )
         self._diameters = diameters
         self._centroids = centroids
 
-        jac_transpose_jac = _np.empty((self.number_of_elements, n_e, n_e), dtype="float64")
+        jac_transpose_jac = _np.empty((self.number_of_elements, n_edges_per_element, n_edges_per_element), dtype="float64")
         for index in range(self.number_of_elements):
             jac_transpose_jac[index] = self.jacobians[index].T.dot(
                 self.jacobians[index]
@@ -626,7 +626,7 @@ class Grid(object):
         jac_transpose_jac_inv = _np.linalg.inv(jac_transpose_jac)
 
         self._jacobian_inverse_transposed = _np.empty(
-            (self.number_of_elements, 3, n_e), dtype="float64"
+            (self.number_of_elements, 3, n_edges_per_element), dtype="float64"
         )
 
         for index in range(self.number_of_elements):
@@ -645,20 +645,20 @@ class Grid(object):
         from scipy.sparse import csr_matrix
 
         element_edges = self.element_edges
-        n_v = self.elements.shape[0]
+        n_vertices_per_element = self.elements.shape[0]
 
-        if n_v == 3:
-            n_e = 3
-        elif n_v == 2:
-            n_e = 1
+        if n_vertices_per_element == 3:
+            n_edges_per_element = 3
+        elif n_vertices_per_element == 2:
+            n_edges_per_element = 1
 
 
         number_of_elements = self.number_of_elements
         number_of_edges = self.number_of_edges
         number_of_vertices = self.number_of_vertices
         edge_indices = _np.ravel(element_edges, order="F")
-        repeated_element_indices = _np.repeat(_np.arange(number_of_elements), n_e)
-        data = _np.ones(n_e * number_of_elements, dtype="uint32")
+        repeated_element_indices = _np.repeat(_np.arange(number_of_elements), n_edges_per_element)
+        data = _np.ones(n_edges_per_element * number_of_elements, dtype="uint32")
         
         #print shapes of every variable that is used in the csr_matrix function
         print("repeated_element_indices: ", repeated_element_indices.shape)
@@ -1515,15 +1515,15 @@ def _numba_enumerate_edges(elements, edge_tuple_to_index):
     """
     edges = []
     
-    n_v = elements.shape[0]
+    n_vertices_per_element = elements.shape[0]
     number_of_elements = elements.shape[1]
-    element_edges = _np.zeros((n_v, number_of_elements), dtype=_np.int32)
+    element_edges = _np.zeros((n_vertices_per_element, number_of_elements), dtype=_np.int32)
 
     number_of_edges = 0
 
     for elem_index in range(number_of_elements):
         elem = elements[:, elem_index]
-        for local_index in range(n_v):
+        for local_index in range(n_vertices_per_element):
             edge_tuple = _vertices_from_edge_index(elem, local_index)
             if edge_tuple not in edge_tuple_to_index:
                 edge_index = number_of_edges
