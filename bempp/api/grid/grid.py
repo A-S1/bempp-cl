@@ -168,7 +168,22 @@ class Grid(object):
 
         """
         return self._element_neighbors
-
+    
+    @property
+    def n_vertices_per_element(self):
+        """Return the number of vertices per element."""
+        return self.elements.shape[0]
+    
+    @property
+    def n_edges_per_element(self):
+        """Return the number of edges per element."""
+        if self.n_vertices_per_element == 3:
+            return 3
+        elif self.n_vertices_per_element == 2:
+            return 1
+        else:
+            raise ValueError("Only triangles and lines are supported.")
+        
     @property
     def number_of_vertices(self):
         """Return number of vertices."""
@@ -573,21 +588,19 @@ class Grid(object):
 
     def _compute_geometric_quantities(self):
         """Compute geometric quantities for the grid."""
-        element_vertices = self.vertices.T[self.elements.flatten(order="F")]
-        n_vertices_per_element = self.elements.shape[0]
-        n_edges_per_element = n_vertices_per_element - 1
-        indexptr = n_vertices_per_element * _np.arange(self.number_of_elements)
-        indices = _np.repeat(indexptr, n_edges_per_element) + _np.tile(_np.arange(1, n_edges_per_element+1), self.number_of_elements)
+        element_vertices = self.vertices.T[self.elements.flatten(order="F")]        
+        indexptr = self.n_vertices_per_element * _np.arange(self.number_of_elements)
+        indices = _np.repeat(indexptr, self.n_edges_per_element) + _np.tile(_np.arange(1, self.n_edges_per_element+1), self.number_of_elements)
 
         centroids = (
             1.0
-            / n_vertices_per_element
+            / self.n_vertices_per_element
             * _np.sum(
-                _np.reshape(element_vertices, (self.number_of_elements, n_vertices_per_element, 3)), axis=1
+                _np.reshape(element_vertices, (self.number_of_elements, self.n_vertices_per_element, 3)), axis=1
             )
         )
 
-        jacobians = (element_vertices - _np.repeat(element_vertices[::n_vertices_per_element], n_vertices_per_element, axis=0))[
+        jacobians = (element_vertices - _np.repeat(element_vertices[::self.n_vertices_per_element], self.n_vertices_per_element, axis=0))[
             indices
         ]
 
@@ -611,12 +624,12 @@ class Grid(object):
         self._volumes = volumes
         self._normals = normals
         self._jacobians = _np.swapaxes(
-            _np.reshape(jacobians, (self.number_of_elements, n_edges_per_element, 3)), 1, 2
+            _np.reshape(jacobians, (self.number_of_elements, self.n_edges_per_element, 3)), 1, 2
         )
         self._diameters = diameters
         self._centroids = centroids
 
-        jac_transpose_jac = _np.empty((self.number_of_elements, n_edges_per_element, n_edges_per_element), dtype="float64")
+        jac_transpose_jac = _np.empty((self.number_of_elements, self.n_edges_per_element, self.n_edges_per_element), dtype="float64")
         for index in range(self.number_of_elements):
             jac_transpose_jac[index] = self.jacobians[index].T.dot(
                 self.jacobians[index]
@@ -626,7 +639,7 @@ class Grid(object):
         jac_transpose_jac_inv = _np.linalg.inv(jac_transpose_jac)
 
         self._jacobian_inverse_transposed = _np.empty(
-            (self.number_of_elements, 3, n_edges_per_element), dtype="float64"
+            (self.number_of_elements, 3, self.n_edges_per_element), dtype="float64"
         )
 
         for index in range(self.number_of_elements):
@@ -645,17 +658,12 @@ class Grid(object):
         from scipy.sparse import csr_matrix
 
         element_edges = self.element_edges
-        n_vertices_per_element = self.elements.shape[0]
-
-        if n_vertices_per_element == 3:
-            n_edges_per_element = 3
-        elif n_vertices_per_element == 2:
-            n_edges_per_element = 1
-
 
         number_of_elements = self.number_of_elements
         number_of_edges = self.number_of_edges
+        n_edges_per_element = self.n_edges_per_element
         number_of_vertices = self.number_of_vertices
+        n_vertices_per_element = self.n_vertices_per_element
         edge_indices = _np.ravel(element_edges, order="F")
         repeated_element_indices = _np.repeat(_np.arange(number_of_elements), n_edges_per_element)
         data = _np.ones(n_edges_per_element * number_of_elements, dtype="uint32")
@@ -684,9 +692,10 @@ class Grid(object):
     def _compute_edge_neighbors(self):
         """Get the neighbors of each edge."""
         edge_neighbors = [[] for _ in range(self.number_of_edges)]
+        n_edges_per_element = self.n_edges_per_element
 
         for element_index in range(self.number_of_elements):
-            for local_index in range(3):
+            for local_index in range(n_edges_per_element):
                 edge_neighbors[self.element_edges[local_index, element_index]].append(
                     element_index
                 )
