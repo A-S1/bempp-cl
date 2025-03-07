@@ -590,7 +590,7 @@ class Grid(object):
         """Compute geometric quantities for the grid."""
         element_vertices = self.vertices.T[self.elements.flatten(order="F")]        
         indexptr = self.n_vertices_per_element * _np.arange(self.number_of_elements)
-        indices = _np.repeat(indexptr, self.n_edges_per_element) + _np.tile(_np.arange(1, self.n_edges_per_element), self.number_of_elements)
+        indices = _np.repeat(indexptr, self.n_edges_per_element) + _np.tile(_np.arange(1, self.n_vertices_per_element), self.number_of_elements)
 
         centroids = (
             1.0
