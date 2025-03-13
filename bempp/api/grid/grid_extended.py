@@ -1075,7 +1075,7 @@ class LineGrid(ExtendedGrid):
         Placeholder: Two segments are adjacent if they share a vertex.
         """
         from bempp.helpers import IndexList
-        self._element_to_vertex_matrix = get_element_to_vertex_matrix(self._vertices, self._elements)
+        self._element_to_vertex_matrix = get_element_to_vertex_matrix(self._vertices, self._elements, "line")
         elem_to_elem_matrix = get_element_to_element_matrix(self._vertices, self._elements)
         self._element_to_element_matrix = elem_to_elem_matrix
         elements1, elements2, nvertices = _get_element_to_element_vertex_count(elem_to_elem_matrix)
@@ -1944,14 +1944,19 @@ class Edge(object):
         return EdgeGeometry(grid.vertices[:, grid.edges[:, self.index]])
 
 
-def get_element_to_vertex_matrix(vertices, elements):
+def get_element_to_vertex_matrix(vertices, elements, grid_type = "triangle"):
     """Return the sparse matrix mapping vertices to elements."""
     from scipy.sparse import csr_matrix
 
     number_of_elements = elements.shape[1]
     number_of_vertices = vertices.shape[1]
     vertex_indices = _np.ravel(elements, order="F")
-    vertex_element_indices = _np.repeat(_np.arange(number_of_elements), 3)
+
+    if grid_type == "triangle":
+        vertex_element_indices = _np.repeat(_np.arange(number_of_elements), 3)
+    elif grid_type == "line":
+        vertex_element_indices = _np.repeat(_np.arange(number_of_elements), 2)
+
     data = _np.ones(len(vertex_indices), dtype="uint32")
 
     return csr_matrix(
