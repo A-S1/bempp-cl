@@ -1965,7 +1965,7 @@ def get_element_to_vertex_matrix(vertices, elements, grid_type = "triangle"):
         vertex_element_indices = _np.repeat(_np.arange(number_of_elements), 3)
     elif grid_type == "line":
         vertex_element_indices = _np.repeat(_np.arange(number_of_elements), 2)
-    elif grid_type == "mixed"
+    elif grid_type == "mixed":
         raise ValueError("Mixed grid not supported, please use get_element_to_vertex_matrix_mixed.")
     else:
         raise ValueError("Unknown grid type.")
