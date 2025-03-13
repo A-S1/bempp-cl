@@ -15,7 +15,7 @@ def import_grid(filename):
     https://github.com/nschloe/meshio
 
     """
-    from bempp.api.grid.grid import Grid
+    from bempp.api.grid.grid_extended import Grid, LineGrid
 
     mesh = _meshio.read(filename)
     vertices = mesh.points.T
@@ -32,6 +32,7 @@ def import_grid(filename):
                 domain_indices = mesh.cell_data_dict["gmsh:geometrical"]["triangle"]
             except Exception:
                 domain_indices = None
+        return Grid(vertices, elements, domain_indices=domain_indices)
 
     elif "line" in mesh.cells_dict:
         elements = mesh.cells_dict["line"].T.astype("uint32")
@@ -45,11 +46,12 @@ def import_grid(filename):
                 domain_indices = mesh.cell_data_dict["gmsh:geometrical"]["line"]
             except Exception:
                 domain_indices = None
+        return LineGrid(vertices, elements, domain_indices=domain_indices)
 
     else:
         raise ValueError("Grid must contain either 'triangle' or 'line' cells.")
 
-    return Grid(vertices, elements, domain_indices=domain_indices)
+
 
 
 def export(
