@@ -1076,7 +1076,7 @@ class LineGrid(ExtendedGrid):
         """
         from bempp.helpers import IndexList
         self._element_to_vertex_matrix = get_element_to_vertex_matrix(self._vertices, self._elements, "line")
-        elem_to_elem_matrix = get_element_to_element_matrix(self._vertices, self._elements)
+        elem_to_elem_matrix = get_element_to_element_matrix(self._vertices, self._elements, "line")
         self._element_to_element_matrix = elem_to_elem_matrix
         elements1, elements2, nvertices = _get_element_to_element_vertex_count(elem_to_elem_matrix)
         # In a line grid, segments share one vertex if adjacent.
@@ -1966,7 +1966,7 @@ def get_element_to_vertex_matrix(vertices, elements, grid_type = "triangle"):
     )
 
 
-def get_element_to_element_matrix(vertices, elements):
+def get_element_to_element_matrix(vertices, elements, grid_type = "triangle"):
     """
     Return element to element matrix.
 
@@ -1974,7 +1974,7 @@ def get_element_to_element_matrix(vertices, elements):
     and element j are connected via n vertices.
 
     """
-    element_to_vertex = get_element_to_vertex_matrix(vertices, elements)
+    element_to_vertex = get_element_to_vertex_matrix(vertices, elements, grid_type)
     return element_to_vertex.T.dot(element_to_vertex)
 
 
