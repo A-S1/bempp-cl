@@ -1337,6 +1337,14 @@ class MixedGrid(Grid, LineGrid):
     @property
     def edge_on_boundary(self):
         return self._edge_on_boundary
+    
+    @property
+    def line_mask(self):
+        return _np.array([t == "line" for t in self._element_types])
+    
+    @property
+    def surface_mask(self):
+        return _np.array([t == "surface" for t in self._element_types]) 
 
     def data(self, precision="double"):
         if precision == "double":
@@ -1952,10 +1960,15 @@ def get_element_to_vertex_matrix(vertices, elements, grid_type = "triangle"):
     number_of_vertices = vertices.shape[1]
     vertex_indices = _np.ravel(elements, order="F")
 
+    
     if grid_type == "triangle":
         vertex_element_indices = _np.repeat(_np.arange(number_of_elements), 3)
     elif grid_type == "line":
         vertex_element_indices = _np.repeat(_np.arange(number_of_elements), 2)
+    elif grid_type == "mixed"
+        raise ValueError("Mixed grid not supported, please use get_element_to_vertex_matrix_mixed.")
+    else:
+        raise ValueError("Unknown grid type.")
 
     data = _np.ones(len(vertex_indices), dtype="uint32")
 
@@ -1976,6 +1989,58 @@ def get_element_to_element_matrix(vertices, elements, grid_type = "triangle"):
     """
     element_to_vertex = get_element_to_vertex_matrix(vertices, elements, grid_type)
     return element_to_vertex.T.dot(element_to_vertex)
+
+
+def get_element_to_vertex_matrix_mixed(grid):
+    """Return the sparse matrix mapping vertices to elements for grids with mixed element types.
+
+    For surface elements (triangle) three vertices are used;
+    for line elements only the first two vertices (the third is a pad) are used.
+    """
+    from scipy.sparse import csr_matrix
+    import numpy as np
+
+    if grid.type != "Mixed Grid":
+        raise ValueError("Grid must be of type Mixed Grid. For other grid types use get_element_to_vertex_matrix.")
+
+    elements = grid.elements
+    vertices = grid.vertices
+
+    # We assume that grid.line_mask and grid.surface_mask are boolean arrays of shape (n_elements,)
+    # that indicate which columns of the elements array belong to line or surface elements.
+    line_mask = grid.line_mask
+    surface_mask = grid.surface_mask
+
+    number_of_elements = elements.shape[1]
+    number_of_vertices = vertices.shape[1]
+
+    vertex_indices_list = []
+    vertex_element_indices_list = []
+
+    for i in range(number_of_elements):
+        if surface_mask[i]:
+            # For a surface element, we use all three vertices.
+            vertex_indices_list.append(elements[:, i])
+            vertex_element_indices_list.append(np.full(3, i, dtype="uint32"))
+        elif line_mask[i]:
+            # For a line element, we use only the first two entries.
+            vertex_indices_list.append(elements[0:2, i])
+            vertex_element_indices_list.append(np.full(2, i, dtype="uint32"))
+        else:
+            raise ValueError(f"Element {i} is not marked as line or surface.")
+
+    vertex_indices = np.concatenate(vertex_indices_list)
+    vertex_element_indices = np.concatenate(vertex_element_indices_list)
+    data = np.ones(len(vertex_indices), dtype="uint32")
+
+    return csr_matrix(
+        (data, (vertex_indices, vertex_element_indices)),
+        shape=(number_of_vertices, number_of_elements),
+        dtype="uint32",
+    )
+
+
+
 
 
 @_numba.njit(locals={"index": _numba.types.int32})

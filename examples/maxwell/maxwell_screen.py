@@ -79,7 +79,8 @@ grid2 = bempp.api.shapes.screen(corners2)
 grid3 = bempp.api.shapes.screen(corners3)
 
 grid4 = bempp.api.shapes.wire(wire_1, 0.1, 0.1)
-grid = bempp.api.grid.union([grid1, grid2, grid3])
+grid5 = bempp.api.grid.union([grid1, grid2, grid3])
+grid = bempp.api.grid.union([grid5, grid4])
 
 # -
 
