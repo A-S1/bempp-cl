@@ -2040,6 +2040,18 @@ def get_element_to_vertex_matrix_mixed(grid):
     )
 
 
+def get_element_to_element_matrix_mixed(grid):
+    """
+    Return element to element matrix.
+
+    If entry (i,j) has the value n > 0, element i
+    and element j are connected via n vertices.
+
+    """
+    element_to_vertex = get_element_to_vertex_matrix_mixed(grid)
+    return element_to_vertex.T.dot(element_to_vertex)
+
+
 
 
 
