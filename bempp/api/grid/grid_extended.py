@@ -1444,8 +1444,8 @@ class MixedGrid(Grid, LineGrid):
 
     def _get_element_adjacency_for_edges_and_vertices(self):
         from bempp.helpers import IndexList
-        self._element_to_vertex_matrix = get_element_to_vertex_matrix(self._vertices, self._elements)
-        elem_to_elem_matrix = get_element_to_element_matrix(self._vertices, self._elements)
+        self._element_to_vertex_matrix = get_element_to_vertex_matrix_mixed(self)
+        elem_to_elem_matrix = get_element_to_element_matrix_mixed(self)
         self._element_to_element_matrix = elem_to_elem_matrix
         elements1, elements2, nvertices = _get_element_to_element_vertex_count(elem_to_elem_matrix)
         # In a mixed grid, we consider two elements adjacent if they share at least one vertex.
