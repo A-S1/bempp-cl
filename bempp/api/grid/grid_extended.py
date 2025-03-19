@@ -735,7 +735,7 @@ class Grid(ExtendedGrid):
 
 class LineGrid(ExtendedGrid):
     @_timeit
-    def __init__(self, vertices, elements, domain_indices=None, grid_id=None, scatter=True):
+    def __init__(self, vertices, elements, domain_indices=None, grid_id=None, scatter=True, wire_radius=0):
         """
         Create a grid from a vertices and an elements array.
         
@@ -751,13 +751,14 @@ class LineGrid(ExtendedGrid):
         self._element_type = "line"
         self._vertices = None
         self._elements = None
+
         self._domain_indices = None
         # In a line grid, each element is itself an edge.
         self._edges = None
-        # There is no separate notion of element_edges (placeholder).
+        # There is no separate notion of element_edges.
         self._element_edges = None
-        self._edge_adjacency = None  # Placeholder: not directly applicable.
-        self._vertex_adjacency = None  # Can be computed based on shared vertices.
+        self._edge_adjacency = None  # Placeholder for consistency: not directly applicable.
+        self._vertex_adjacency = None  # computed based on shared vertices.
         self._element_neighbors = None  # Placeholder.
         self._vertex_on_boundary = None
         self._edge_on_boundary = None
@@ -777,6 +778,8 @@ class LineGrid(ExtendedGrid):
         self._integration_elements = None
         self._centroids = None
 
+        self._wire_radius = None
+
         self._device_interfaces = {}
 
         self._element_to_vertex_matrix = None
@@ -784,11 +787,12 @@ class LineGrid(ExtendedGrid):
 
         self._normalize_and_assign_input(vertices, elements, domain_indices)
         self._enumerate_edges()  # For lines, simply copy elements as edges.
-        self._get_element_adjacency_for_edges_and_vertices()  # Placeholder or adapted below.
+        self._get_element_adjacency_for_edges_and_vertices()  #  adapted below.
         self._compute_geometric_quantities()  # Adapted for line segments.
         self._compute_boundary_information()  # Adapted for endpoints.
-        self._compute_edge_neighbors()  # Placeholder.
-        self._compute_vertex_neighbors()  # Similar to triangle grid.
+        self._compute_edge_neighbors()  
+        self._compute_vertex_neighbors() 
+        self._compute_cumulative_lengths()
 
         self._grid_data_double = LineGridDataDouble(
             self._vertices,
@@ -957,6 +961,11 @@ class LineGrid(ExtendedGrid):
     @property
     def edge_neighbors(self):
         return self._edge_neighbors
+    
+    @property
+    def wire_radius(self):
+        """Return radii array for each segment."""
+        return self._wire_radius
 
     def data(self, precision="double"):
         if precision == "double":
@@ -1047,6 +1056,55 @@ class LineGrid(ExtendedGrid):
             new_elements[:, 2*i+1] = [midpoint_index, self.elements[1, i]]
         return LineGrid(new_vertices, new_elements, new_domain_indices)
 
+
+    def parametrization(self, points):
+        """
+        Map 3D points to arc-length parameter s ∈ [0, total_length].
+        points: 3 x N array of points on the wire.
+        Returns: 1D array of s values.
+        """
+        s_values = []
+        total_length = self._cumulative_lengths[-1]
+        for pt in points.T:
+            # Find closest segment and interpolate s
+            min_dist = _np.inf
+            closest_s = 0
+            for i in range(self.number_of_elements):
+                v0 = self.vertices[:, self.elements[0, i]]
+                v1 = self.vertices[:, self.elements[1, i]]
+                # Project pt onto segment and compute s
+                t = _np.dot(pt - v0, v1 - v0) / (self.integration_elements[i]**2)
+                t = _np.clip(t, 0, 1)
+                proj = v0 + t * (v1 - v0)
+                dist = _np.linalg.norm(pt - proj)
+                if dist < min_dist:
+                    min_dist = dist
+                    s = self._cumulative_lengths[i] + t * self.integration_elements[i]
+            s_values.append(s)
+        return _np.array(s_values)
+
+    
+    def _compute_cumulative_lengths(self):
+        """Precompute cumulative arc lengths from start to each segment."""
+        lengths = self.integration_elements  # Segment lengths
+        self._cumulative_lengths = _np.cumsum(lengths)
+        self._cumulative_lengths = _np.insert(self._cumulative_lengths, 0, 0)
+
+    def _compute_radius(self, wire_radius):
+        """Compute radii for each segment or quadrature point."""
+        if callable(wire_radius):
+            # Evaluate function at segment midpoints (or parametrized points)
+            self._wire_radius = self._evaluate_radius_function(wire_radius)
+        else:
+            # Constant radius for all segments
+            self._wire_radius = _np.full(self.number_of_elements, wire_radius)
+
+    def _evaluate_radius_function(self, wire_radius):
+        """Evaluate radius function at segment midpoints or parametrized positions."""
+        # Use parametrization (arc length) or 3D positions
+        param_values = self.parametrization(self.centroids)  # See parametrization section
+        return _np.array([wire_radius(s) for s in param_values])
+
     def _compute_vertex_neighbors(self):
         from bempp.helpers import IndexList
         indptr = self.element_to_vertex_matrix.indptr
@@ -1095,7 +1153,7 @@ class LineGrid(ExtendedGrid):
           - Jacobian: difference vector (3x1).
           - Integration element and diameter: segment length.
           - Normal: unit tangent vector.
-          - Jacobian inverse transposed: placeholder (jacobian divided by squared norm).
+          - Jacobian inverse transposed: jacobian divided by squared norm.
         """
         element_vertices = self.vertices.T[self.elements.flatten(order="F")]
         element_vertices = _np.reshape(element_vertices, (self.number_of_elements, 2, 3))
@@ -1122,6 +1180,12 @@ class LineGrid(ExtendedGrid):
                 self._jacobian_inverse_transposed[index] = jacobians[index] / norm_sq
             else:
                 self._jacobian_inverse_transposed[index] = 0
+
+    def _compute_cumulative_lengths(self):
+        """Precompute cumulative arc lengths from start to each segment."""
+        lengths = self.integration_elements  # Segment lengths
+        self._cumulative_lengths = _np.cumsum(lengths)
+        self._cumulative_lengths = _np.insert(self._cumulative_lengths, 0, 0)
 
     def _compute_boundary_information(self):
         """
@@ -1345,6 +1409,13 @@ class MixedGrid(Grid, LineGrid):
     @property
     def surface_mask(self):
         return _np.array([t == "surface" for t in self._element_types]) 
+    
+    @property
+    def wire_thickness(self):
+        """
+        Compute the thickness of the line elements.
+        """
+        return 0
 
     def data(self, precision="double"):
         if precision == "double":
@@ -1386,9 +1457,8 @@ class MixedGrid(Grid, LineGrid):
         if surface_indices.size > 0:
             # Extract the subset of connectivity for surface elements.
             surf_elements = self._elements[:, surface_indices]
-            # Domain indices must be extracted as well.
             surf_domains = self._domain_indices[surface_indices]
-            # Create a temporary Grid instance.
+    
             temp_surf = Grid(self._vertices, surf_elements, surf_domains)
             temp_surf._compute_geometric_quantities()
             centroids[surface_indices, :] = temp_surf._centroids
@@ -1428,13 +1498,6 @@ class MixedGrid(Grid, LineGrid):
         self._normals = normals
         self._integration_elements = integration_elements
 
-    # For many other methods (e.g. _enumerate_edges, _compute_boundary_information, etc.)
-    # it may be possible to reuse the implementations from Grid or LineGrid if they do not
-    # depend on element type. In cases where the behavior must differ, you can either branch
-    # based on self._element_types or delegate to parent implementations on subsets.
-    #
-    # For example, _enumerate_edges in this implementation simply calls a generic edge enumeration
-    # function (assumed available) that works on the uniform connectivity array.
     def _enumerate_edges(self):
         edge_tuple_to_index = _numba.typed.Dict.empty(
             key_type=_numba.types.containers.UniTuple(_numba.types.int64, 2),
@@ -1448,7 +1511,6 @@ class MixedGrid(Grid, LineGrid):
         elem_to_elem_matrix = get_element_to_element_matrix_mixed(self)
         self._element_to_element_matrix = elem_to_elem_matrix
         elements1, elements2, nvertices = _get_element_to_element_vertex_count(elem_to_elem_matrix)
-        # In a mixed grid, we consider two elements adjacent if they share at least one vertex.
         filtered_idx = _np.argwhere(nvertices >= 1).flatten()
         vce1 = elements1[filtered_idx]
         vce2 = elements2[filtered_idx]
@@ -1529,8 +1591,7 @@ class MixedGrid(Grid, LineGrid):
         if local_points is None:
             if order is None:
                 order = bempp.api.GLOBAL_PARAMETERS.quadrature.regular
-            # For simplicity, use the triangle Gauss rule; a more refined version would
-            # branch based on element type.
+            """Placeholder, we must use different integration rules for the two surfaces"""
             from bempp.api.integration.triangle_gauss import rule
             local_points, _ = rule(order)
         return grid_to_points(self.data("double"), local_points)
@@ -3057,13 +3118,11 @@ def union_mixed(grids, domain_indices=None, swapped_normals=None, normalize_doma
 
     types = [grid.type.lower() for grid in grids]
     if not (("triangle" in types[0] and "line" in types[1]) or ("line" in types[0] and "triangle" in types[1])):
-        raise ValueError("union_mixed requires one surface grid and one line grid")
+        raise ValueError("union_mixed requires exactly one surface grid and one line grid, please use union to first generate united line and surface grids")
     
-    # Set swapped_normals if not provided.
     if swapped_normals is None:
         swapped_normals = [False, False]
     
-    # Process domain_indices: if not provided, use each grid's own; if normalization is requested, normalize each.
     if domain_indices is None:
         domain_indices = [grid.domain_indices for grid in grids]
         if normalize_domain_indices:
@@ -3075,40 +3134,39 @@ def union_mixed(grids, domain_indices=None, swapped_normals=None, normalize_doma
                 return arr
             domain_indices = [normalize_array(di.copy()) for di in domain_indices]
     
-    # Union vertices via snapping.
-    vertex_map = {}  # Maps rounded coordinate tuple to new global index.
-    new_vertices_list = []  # List of 3-element tuples.
-    new_domain_indices = []  # One domain index per element.
-    new_elements = []  # List of tuples: (etype, connectivity). For surface: length 3; for line: length 2.
+
+    vertex_map = {}  
+    new_vertices_list = []  
+    new_domain_indices = []  
+    new_elements = []  
     
     for grid, di in zip(grids, domain_indices):
-        # Iterate over each vertex in the grid.
         for j in range(grid.number_of_vertices):
             coord = tuple(grid.vertices[:, j].round(decimals=12))
             if coord not in vertex_map:
                 vertex_map[coord] = len(new_vertices_list)
                 new_vertices_list.append(coord)
-        # Iterate over elements.
+  
         for k in range(grid.number_of_elements):
-            # For surface grids, optionally swap normals.
+
             if "triangle" in grid.type.lower() and swapped_normals[grids.index(grid)]:
                 current_conn = grid.elements[[0, 2, 1], k]
             else:
                 current_conn = grid.elements[:, k]
-            # Map local connectivity to global vertex indices.
+
             global_conn = []
+
             for idx in current_conn:
                 coord = tuple(grid.vertices[:, idx].round(decimals=12))
                 global_conn.append(vertex_map[coord])
-            # Determine element type.
+
             etype = "surface" if "triangle" in grid.type.lower() else "line"
             new_elements.append((etype, global_conn))
             new_domain_indices.append(di[k])
     
-    new_vertices = _np.array(new_vertices_list).T  # shape (3, N)
+    new_vertices = _np.array(new_vertices_list).T 
     new_domain_indices = _np.array(new_domain_indices)
     
-    # Compute junctions: for each global vertex, record the set of element types that use it.
     vertex_to_types = {}
     for etype, conn in new_elements:
         for v in conn:
