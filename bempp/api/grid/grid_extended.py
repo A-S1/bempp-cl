@@ -1243,6 +1243,7 @@ class MixedGrid(Grid, LineGrid):
         self._vertices = union_dict["vertices"]
         self._domain_indices = union_dict["domain_indices"]
         self._junctions = union_dict["junctions"]
+        self._wire_radius = union_dict.get("wire_radius", 0)
         
         n_elements = len(union_dict["elements"])
         self._element_types = []  # list of "line" or "surface" for each element.
@@ -1411,11 +1412,14 @@ class MixedGrid(Grid, LineGrid):
         return _np.array([t == "surface" for t in self._element_types]) 
     
     @property
-    def wire_thickness(self):
+    def wire_radius(self):
         """
-        Compute the thickness of the line elements.
+        Compute the radius of the wire (line elements).
         """
-        return 0
+        if self._wire_radius is None:
+            return None
+        else:
+            return  self._wire_radius
 
     def data(self, precision="double"):
         if precision == "double":
@@ -1601,6 +1605,35 @@ class MixedGrid(Grid, LineGrid):
         array_proxies = pool.to_buffer(self.vertices, self.elements, self.domain_indices)
         pool.execute(_grid_scatter_worker, self.id, array_proxies)
         self._is_scattered = True
+
+    def parametrization(self, points):
+        """
+        Map 3D points to an arc-length parameter s along the wire (line elements).
+        This method considers only the line elements in the MixedGrid.
+
+        Parameters
+        ----------
+        points : 3 x N numpy array
+            The coordinates of points on (or near) the wire.
+        
+        Returns
+        -------
+        1D numpy array
+            Arc-length parameters corresponding to the input points.
+        """
+        line_mask = self.line_mask
+        if not _np.any(line_mask):
+            raise ValueError("No line elements available for parametrization.")
+        
+        # Create connectivity for line elements.
+        line_elements = self._elements[0:2, _np.where(line_mask)[0]]
+        line_domains = self._domain_indices[_np.where(line_mask)[0]]
+        
+        # Instantiate an auxiliary LineGrid.
+        temp_line_grid = LineGrid(self._vertices, line_elements, line_domains)
+        
+        # Use its parametrization method.
+        return temp_line_grid.parametrization(points)
 
     @property
     def id(self):
@@ -3172,15 +3205,24 @@ def union_mixed(grids, domain_indices=None, swapped_normals=None, normalize_doma
         for v in conn:
             vertex_to_types.setdefault(v, set()).add(etype)
     junctions = {v: types for v, types in vertex_to_types.items() if len(types) > 1}
+
+
+    line_grid = None
+    for grid in grids:
+        if "line" in grid.type.lower():
+            line_grid = grid
+            break
     
     union_dict = {
         "vertices": new_vertices,
         "elements": new_elements,
         "domain_indices": new_domain_indices,
-        "junctions": junctions
+        "junctions": junctions,
+        "wire_radius": line_grid.wire_radius if line_grid else None  # Add wire_radius
     }
       
     return MixedGrid(union_dict)
+    
 
 
 def union(grids, domain_indices=None, swapped_normals=None, normalize_domain_indices=True):
