@@ -455,16 +455,14 @@ def _compute_pwl0_space_data(grid):
     """
     Compute the local-to-global mapping for piecewise linear functions on a line grid.
     
-    In a line grid, the degrees of freedom are associated with the vertices.
-    Each segment (element) has two local dofs given by its endpoints.
+    In a line grid, the degrees of freedom are associated with the vertices (global_dof_count),
+    but the local mapping (local2global and local multipliers) is defined per element (segment).
     """
-    global_dof_count = grid.number_of_vertices
-    # For each element, the local dofs are simply the two vertex indices.
-    local2global = grid.elements[0:2, :].T.copy()  # shape (n_elements, 2)
-    # Set local multipliers to ones (they may be used for sign conventions).
+    global_dof_count = grid.number_of_vertices  # Number of DOFs (one per vertex)
+    local2global = grid.elements[0:2, :].T.copy()  # Shape: (number_of_elements, 2)
     local_multipliers = _np.ones((grid.number_of_elements, 2), dtype=_np.float64)
-    # All vertices are considered to be in the support.
-    support = _np.ones(global_dof_count, dtype=_np.bool_)
+    # Here, support must be of length grid.number_of_elements!
+    support = _np.ones(grid.number_of_elements, dtype=bool)
     return global_dof_count, support, local2global, local_multipliers
 
 def pwl0_barycentric_function_space(coarse_space):

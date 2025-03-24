@@ -16,9 +16,9 @@ grid4 = bempp.api.shapes.wire(wire_1, 0.1, 0.1)
 grid5 = bempp.api.grid.union([grid1, grid2, grid3])
 grid = bempp.api.grid.union([grid5, grid4])
 
-grid5.plot()
-grid4.plot()
-grid.plot()	
+# grid5.plot()
+# grid4.plot()
+# grid.plot()	
 
 if hasattr(grid, 'line_mask'):
     line_elements = grid.elements[:, grid.line_mask]
