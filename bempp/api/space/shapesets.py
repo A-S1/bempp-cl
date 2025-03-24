@@ -130,7 +130,44 @@ def _snc0_shapeset_gradient(local_coordinates):
     grad[0] = - temp[1]
     grad[1] = temp[0]
     return grad
+@_numba.njit
+def _pwl0_shapeset_evaluate(local_coordinates):
+    """
+    Evaluate the PWL 0 shapeset on the 1D reference element.
+    
+    The reference element is assumed to have a single coordinate s in [0,1].
+    There are two scalar basis functions defined by:
+    
+        phi0(s) = 1 - s,   phi1(s) = s.
+    
+    This function returns an array of shape (1, 2, npoints), where the first index is a dummy
+    (for compatibility with vector spaces) and the second index corresponds to the two basis functions.
+    """
+    npoints = local_coordinates.shape[1]
+    result = _np.empty((1, 2, npoints), dtype=local_coordinates.dtype)
+    s = local_coordinates[0, :]
+    result[0, 0, :] = 1.0 - s
+    result[0, 1, :] = s
+    return result
 
+
+@_numba.njit
+def _pwl0_shapeset_gradient(local_coordinates):
+    """
+    Evaluate the gradient of the PWL 0 shapeset on the 1D reference element.
+    
+    Since phi0(s) = 1 - s and phi1(s) = s, we have:
+    
+        dphi0/ds = -1,   dphi1/ds = 1.
+    
+    To keep the same array shape as the gradients for other shapesets,
+    we return an array of shape (1, 2, 1, npoints).
+    """
+    npoints = local_coordinates.shape[1]
+    result = _np.empty((1, 2, 1, npoints), dtype=local_coordinates.dtype)
+    result[0, 0, 0, :] = -1.0
+    result[0, 1, 0, :] = 1.0
+    return result
 
 _SHAPESETS = {
     "p0_discontinuous": {
@@ -160,5 +197,12 @@ _SHAPESETS = {
         "number_of_shape_functions": 3,
         "identifier": "snc0",
         "dimension": 2,
+    },
+    "pwl0": {
+        "evaluate": _pwl0_shapeset_evaluate,
+        "gradient": _pwl0_shapeset_gradient,
+        "number_of_shape_functions": 2,
+        "identifier": "pwl0",
+        "dimension": 1,
     },
 }
