@@ -76,6 +76,10 @@ def function_space(grid, kind, degree, scatter=True, **kwargs):
         if degree == 0:
             space_f = maxwell_spaces.rbc_function_space
 
+    if kind == "PWL":
+        if degree == 0:
+            space_f = maxwell_spaces.pwl0_function_space
+
     if space_f is None:
         raise ValueError("Requested space not implemented.")
 
