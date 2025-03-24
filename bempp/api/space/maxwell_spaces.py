@@ -410,6 +410,101 @@ def rbc_function_space(
         .build()
     )
 
+def pwl0_function_space(
+    grid,
+    support_elements=None,
+    segments=None,
+    swapped_normals=None,
+    include_boundary_dofs=False,
+    truncate_at_segment_edge=True,
+):
+    """
+    Define a space of piecewise linear (PWL) functions of order 0 on a line grid.
+    
+    For a line grid the basis functions are the standard hat functions
+    defined on the vertices. In a scattering formulation on a thin wire,
+    the current is assumed to be along the tangent; therefore, the scalar
+    hat function is multiplied by the element’s tangent vector.
+    """
+    from .space import SpaceBuilder, _process_segments
+    # Process segments—here we simply pass through (for a line grid the support
+    # will be all vertices) and any normal multipliers (which could be used to
+    # enforce an orientation, though typically they are ones).
+    support, normal_multipliers = _process_segments(grid, support_elements, segments, swapped_normals)
+    
+    # Compute the mapping and multipliers specific for line grids.
+    global_dof_count, support, local2global, local_multipliers = _compute_pwl0_space_data(grid)
+    
+    return (
+        SpaceBuilder(grid)
+        .set_codomain_dimension(3)  # The vector basis is in R^3 (tangent multiplied)
+        .set_support(support)
+        .set_normal_multipliers(normal_multipliers)  # For a line, typically all ones.
+        .set_order(0)
+        .set_is_localised(False)
+        .set_shapeset("pwl0")
+        .set_identifier("pwl0")
+        .set_local2global(local2global)
+        .set_local_multipliers(local_multipliers)
+        .set_barycentric_representation(pwl0_barycentric_function_space)
+        .set_numba_evaluator(_numba_pwl0_evaluate)
+        .build()
+    )
+
+def _compute_pwl0_space_data(grid):
+    """
+    Compute the local-to-global mapping for piecewise linear functions on a line grid.
+    
+    In a line grid, the degrees of freedom are associated with the vertices.
+    Each segment (element) has two local dofs given by its endpoints.
+    """
+    global_dof_count = grid.number_of_vertices
+    # For each element, the local dofs are simply the two vertex indices.
+    local2global = grid.elements[0:2, :].T.copy()  # shape (n_elements, 2)
+    # Set local multipliers to ones (they may be used for sign conventions).
+    local_multipliers = _np.ones((grid.number_of_elements, 2), dtype=_np.float64)
+    # All vertices are considered to be in the support.
+    support = _np.ones(global_dof_count, dtype=_np.bool_)
+    return global_dof_count, support, local2global, local_multipliers
+
+def pwl0_barycentric_function_space(coarse_space):
+    """
+    Define a barycentric function space for piecewise linear functions on a line grid.
+    
+    Here the barycentric refinement of the line grid is used. Typically the
+    barycentrically refined grid is obtained by splitting each segment
+    (as in your LineGrid.refine() method). The degrees of freedom are then 
+    simply those of the refined grid (here we use an identity dof transformation).
+    """
+    from .space import SpaceBuilder
+    # Obtain the refined (barycentric) grid.
+    bary_grid = coarse_space.grid.barycentric_refinement
+    global_dof_count = bary_grid.number_of_vertices
+    # In a PWL space, the dofs are associated with the vertices.
+    local2global = _np.arange(global_dof_count).reshape((-1, 1))
+    support = _np.ones(global_dof_count, dtype=_np.bool_)
+    # For consistency, each vertex contributes one dof.
+    local_multipliers = _np.ones((global_dof_count, 1), dtype=_np.uint32)
+    # Here we use an identity transformation.
+    dof_transformation = _np.eye(global_dof_count, dtype=_np.float64)
+    
+    return (
+        SpaceBuilder(bary_grid)
+        .set_codomain_dimension(3)
+        .set_support(support)
+        .set_normal_multipliers(_np.ones(global_dof_count, dtype=_np.uint32))
+        .set_order(0)
+        .set_is_localised(True)
+        .set_is_barycentric(True)
+        .set_shapeset("pwl0")
+        .set_identifier("pwl0")
+        .set_local2global(local2global)
+        .set_local_multipliers(local_multipliers)
+        .set_dof_transformation(dof_transformation)
+        .set_numba_evaluator(_numba_pwl0_evaluate)
+        .build()
+    )
+
 
 def _compute_bc_space_data(
     grid, bary_grid, coarse_space, truncate_at_segment_edge, swapped_normals
@@ -621,6 +716,21 @@ def _compute_rwg0_space_data(
 
     return dof_count, support, local2global_map, local_multipliers
 
+def _compute_pwl0_space_data(grid):
+    """
+    Compute the local-to-global mapping for piecewise linear functions on a line grid.
+    
+    In a line grid, the degrees of freedom are associated with the vertices.
+    Each segment (element) has two local dofs given by its endpoints.
+    """
+    global_dof_count = grid.number_of_vertices
+    # For each element, the local dofs are simply the two vertex indices.
+    local2global = grid.elements[0:2, :].T.copy()  # shape (n_elements, 2)
+    # Set local multipliers to ones (they may be used for sign conventions).
+    local_multipliers = _np.ones((grid.number_of_elements, 2), dtype=_np.float64)
+    # All vertices are considered to be in the support.
+    support = _np.ones(global_dof_count, dtype=_np.bool_)
+    return global_dof_count, support, local2global, local_multipliers
 
 @_numba.njit(cache=True)
 def generate_rwg0_map(grid_data, support_elements, local_coords, coeffs):
@@ -802,4 +912,70 @@ def _numba_snc0_surface_curl(
             local_multipliers[element_index, index]
             * edge_lengths[index] * reference_values
         )
+    return result
+
+
+@_numba.njit()
+def _numba_pwl0_evaluate(
+    element_index,
+    shapeset_evaluate,  # For PWL functions this is not used but kept for interface compatibility.
+    local_coordinates,
+    grid_data,
+    local_multipliers,
+    normal_multipliers  # Not used for line grids 
+):
+    """
+    Evaluate the piecewise linear (PWL) basis functions on a line grid element.
+    
+    For a line segment with endpoints v0 and v1, the two scalar basis functions are:
+    
+        phi0(s) = 1 - s,   phi1(s) = s,
+    
+    where s ∈ [0,1] is the local coordinate along the segment.
+    The vector basis function is obtained by multiplying the scalar function by the 
+    element’s tangent vector.
+    
+    Parameters
+    ----------
+    element_index : int
+        Index of the line element.
+    local_coordinates : (1, npoints) array
+        Array of local coordinates (s values) in [0,1].
+    grid_data : object
+        Data container holding grid information (vertices, elements, etc.).
+    local_multipliers : (n_elements, 2) array
+        Multipliers (typically ones) for each local basis function.
+    
+    Returns
+    -------
+    result : (3, 2, npoints) array
+        The evaluated basis functions for the two local dofs (each a 3D vector) at
+        the given local coordinates.
+    """
+    npoints = local_coordinates.shape[1]
+    result = _np.empty((3, 2, npoints), dtype=_np.float64)
+    
+    v0 = grid_data.vertices[:, grid_data.elements[0, element_index]]
+    v1 = grid_data.vertices[:, grid_data.elements[1, element_index]]
+    seg_vec = v1 - v0
+    seg_len = _np.linalg.norm(seg_vec)
+    if seg_len > 0:
+        tangent = seg_vec / seg_len
+    else:
+        tangent = _np.zeros(3)
+    
+    s = local_coordinates[0, :]
+    
+    phi0 = 1.0 - s
+    phi1 = s
+    
+    for i in range(npoints):
+        result[0, 0, i] = tangent[0] * phi0[i] * local_multipliers[element_index, 0]
+        result[1, 0, i] = tangent[1] * phi0[i] * local_multipliers[element_index, 0]
+        result[2, 0, i] = tangent[2] * phi0[i] * local_multipliers[element_index, 0]
+        
+        result[0, 1, i] = tangent[0] * phi1[i] * local_multipliers[element_index, 1]
+        result[1, 1, i] = tangent[1] * phi1[i] * local_multipliers[element_index, 1]
+        result[2, 1, i] = tangent[2] * phi1[i] * local_multipliers[element_index, 1]
+    
     return result
