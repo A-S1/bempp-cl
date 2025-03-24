@@ -109,7 +109,10 @@ def wire(corners, h=0.1, a=0.1):
     Physical Curve(1) = {{1}};
     Mesh.Algorithm = 6;
     """
-    return __generate_grid_from_geo_string(stub)
+    grid = __generate_grid_from_geo_string(stub)
+    # Now assign the wire radius to the grid.
+    grid._wire_radius = a
+    return grid
 
 def screen(corners, h=0.1):
     """
