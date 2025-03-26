@@ -15,13 +15,16 @@ def import_grid(filename):
     https://github.com/nschloe/meshio
 
     """
-    from bempp.api.grid.grid_extended import Grid, LineGrid
+    from bempp.api.grid.grid_extended import Grid, LineGrid, union
 
     mesh = _meshio.read(filename)
     vertices = mesh.points.T
 
+    surface_grid = None
+    line_grid = None
+
     if "triangle" in mesh.cells_dict:
-        elements = mesh.cells_dict["triangle"].T.astype("uint32")
+        elements_tri = mesh.cells_dict["triangle"].T.astype("uint32")
         try:
             domain_indices = mesh.cell_data_dict["gmsh:physical"]["triangle"]
         except Exception:
@@ -32,10 +35,11 @@ def import_grid(filename):
                 domain_indices = mesh.cell_data_dict["gmsh:geometrical"]["triangle"]
             except Exception:
                 domain_indices = None
-        return Grid(vertices, elements, domain_indices=domain_indices)
+        
+        surface_grid = Grid(vertices, elements_tri, domain_indices=domain_indices)
 
-    elif "line" in mesh.cells_dict:
-        elements = mesh.cells_dict["line"].T.astype("uint32")
+    if "line" in mesh.cells_dict:
+        line_elements = mesh.cells_dict["line"].T.astype("uint32")
         try:
             domain_indices = mesh.cell_data_dict["gmsh:physical"]["line"]
         except Exception:
@@ -46,10 +50,19 @@ def import_grid(filename):
                 domain_indices = mesh.cell_data_dict["gmsh:geometrical"]["line"]
             except Exception:
                 domain_indices = None
-        return LineGrid(vertices, elements, domain_indices=domain_indices)
+        line_grid = LineGrid(vertices, line_elements, domain_indices=domain_indices)
 
-    else:
+    if surface_grid is None and line_grid is None:
         raise ValueError("Grid must contain either 'triangle' or 'line' cells.")
+    
+    if surface_grid is None:
+        return line_grid
+    
+    if line_grid is None:
+        return surface_grid
+    
+    grid = union(surface_grid, line_grid)
+    return grid
 
 
 
