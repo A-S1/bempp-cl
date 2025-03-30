@@ -23,29 +23,37 @@ def import_grid(filename):
     surface_grid = None
     line_grid = None
 
+    # Process triangles if available.
     if "triangle" in mesh.cells_dict:
         elements_tri = mesh.cells_dict["triangle"].T.astype("uint32")
         try:
             domain_indices = mesh.cell_data_dict["gmsh:physical"]["triangle"]
         except Exception:
             domain_indices = None
-
-        if domain_indices is None or _np.all(domain_indices == 0):
+        if domain_indices is None or np.all(domain_indices == 0):
             try:
                 domain_indices = mesh.cell_data_dict["gmsh:geometrical"]["triangle"]
             except Exception:
                 domain_indices = None
-        
         surface_grid = Grid(vertices, elements_tri, domain_indices=domain_indices)
 
+    # Process lines either from cells_dict or by iterating over mesh.cells.
     if "line" in mesh.cells_dict:
         line_elements = mesh.cells_dict["line"].T.astype("uint32")
+    else:
+        # Search for any cell block of type 'line' in mesh.cells.
+        line_elements = None
+        for cell_block in mesh.cells:
+            if cell_block.type == "line":
+                line_elements = cell_block.data.T.astype("uint32")
+                break
+
+    if line_elements is not None:
         try:
             domain_indices = mesh.cell_data_dict["gmsh:physical"]["line"]
         except Exception:
             domain_indices = None
-
-        if domain_indices is None or _np.all(domain_indices == 0):
+        if domain_indices is None or np.all(domain_indices == 0):
             try:
                 domain_indices = mesh.cell_data_dict["gmsh:geometrical"]["line"]
             except Exception:
@@ -54,16 +62,13 @@ def import_grid(filename):
 
     if surface_grid is None and line_grid is None:
         raise ValueError("Grid must contain either 'triangle' or 'line' cells.")
-    
     if surface_grid is None:
         return line_grid
-    
     if line_grid is None:
         return surface_grid
-    
+
     grid = union(surface_grid, line_grid)
     return grid
-
 
 
 

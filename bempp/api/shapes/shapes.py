@@ -75,6 +75,7 @@ def __generate_grid_from_geo_string(geo_string):
     os.remove(msh_name)
     return grid
 
+
 def wire(corners, h=0.1, a=0.1):
     """
     Create a thin wire.
@@ -103,7 +104,7 @@ def wire(corners, h=0.1, a=0.1):
     stub = f"""
     cl = {h};
     a = {a}; // Wire radius parameter declared, but not used automatically by the mesher.
-    Point(1) = {{ {corners[0,0]}, {corners[0,1]}, {corners[0,2]}, cl }};
+    Point(1) = {{ {corners[0, 0]}, {corners[0,1]}, {corners[0,2]}, cl }};
     Point(2) = {{ {corners[1,0]}, {corners[1,1]}, {corners[1,2]}, cl }};
     Line(1) = {{1,2}};
     Physical Curve(1) = {{1}};
@@ -113,6 +114,7 @@ def wire(corners, h=0.1, a=0.1):
     # Now assign the wire radius to the grid.
     grid._wire_radius = a
     return grid
+
 
 def screen(corners, h=0.1):
     """
