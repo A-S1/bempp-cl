@@ -67,7 +67,7 @@ def import_grid(filename):
     if line_grid is None:
         return surface_grid
 
-    grid = union(surface_grid, line_grid)
+    grid = union([surface_grid, line_grid])
     return grid
 
 
