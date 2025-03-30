@@ -30,7 +30,7 @@ def import_grid(filename):
             domain_indices = mesh.cell_data_dict["gmsh:physical"]["triangle"]
         except Exception:
             domain_indices = None
-        if domain_indices is None or np.all(domain_indices == 0):
+        if domain_indices is None or _np.all(domain_indices == 0):
             try:
                 domain_indices = mesh.cell_data_dict["gmsh:geometrical"]["triangle"]
             except Exception:
@@ -53,7 +53,7 @@ def import_grid(filename):
             domain_indices = mesh.cell_data_dict["gmsh:physical"]["line"]
         except Exception:
             domain_indices = None
-        if domain_indices is None or np.all(domain_indices == 0):
+        if domain_indices is None or _np.all(domain_indices == 0):
             try:
                 domain_indices = mesh.cell_data_dict["gmsh:geometrical"]["line"]
             except Exception:
@@ -206,7 +206,7 @@ def _transform_array(a, mode=None):
 
     Parameters
     ----------
-    a : np.ndarray
+    a : _np.ndarray
         Either a scalar array or a two dimensional data array.
     mode : string, callable or None
         One of 'real', 'imag', 'abs', 'log_abs', 'abs_squared',
