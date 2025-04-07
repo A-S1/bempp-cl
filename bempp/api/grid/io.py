@@ -23,7 +23,6 @@ def import_grid(filename):
     surface_grid = None
     line_grid = None
 
-    # Process triangles if available.
     if "triangle" in mesh.cells_dict:
         elements_tri = mesh.cells_dict["triangle"].T.astype("uint32")
         try:
@@ -37,11 +36,9 @@ def import_grid(filename):
                 domain_indices = None
         surface_grid = Grid(vertices, elements_tri, domain_indices=domain_indices)
 
-    # Process lines either from cells_dict or by iterating over mesh.cells.
     if "line" in mesh.cells_dict:
         line_elements = mesh.cells_dict["line"].T.astype("uint32")
     else:
-        # Search for any cell block of type 'line' in mesh.cells.
         line_elements = None
         for cell_block in mesh.cells:
             if cell_block.type == "line":
@@ -61,7 +58,7 @@ def import_grid(filename):
         line_grid = LineGrid(vertices, line_elements, domain_indices=domain_indices)
 
     if surface_grid is None and line_grid is None:
-        raise ValueError("Grid must contain either 'triangle' or 'line' cells.")
+        raise ValueError("Grid must contain at least one of 'triangle' and 'line' type cells.")
     if surface_grid is None:
         return line_grid
     if line_grid is None:

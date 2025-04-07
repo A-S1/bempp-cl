@@ -782,7 +782,7 @@ class LineGrid(ExtendedGrid):
 
         self._device_interfaces = {}
 
-        self._element_to_vertex_matrix = None
+        self._element_to_vertex_matrixLineGridDataDouble = None
         self._element_to_element_matrix = None
 
         self._normalize_and_assign_input(vertices, elements, domain_indices)
@@ -794,7 +794,7 @@ class LineGrid(ExtendedGrid):
         self._compute_vertex_neighbors() 
         self._compute_cumulative_lengths()
 
-        self._grid_data_double = LineGridDataDouble(
+        self._grid_data_double = (
             self._vertices,
             self._elements,
             self._edges,
@@ -806,6 +806,7 @@ class LineGrid(ExtendedGrid):
             self._diameters,
             self._integration_elements,
             self._centroids,
+            self._wire_radius,
             self._domain_indices,
             self._vertex_on_boundary,
             self._element_neighbors.indices if self._element_neighbors is not None else _np.array([], dtype="uint32"),
@@ -824,6 +825,7 @@ class LineGrid(ExtendedGrid):
             self._diameters.astype("float32"),
             self._integration_elements.astype("float32"),
             self._centroids.astype("float32"),
+            self._wire_radius.astype("float32"),
             self._domain_indices,
             self._vertex_on_boundary,
             self._element_neighbors.indices if self._element_neighbors is not None else _np.array([], dtype="uint32"),
@@ -1056,7 +1058,6 @@ class LineGrid(ExtendedGrid):
             new_elements[:, 2*i+1] = [midpoint_index, self.elements[1, i]]
         return LineGrid(new_vertices, new_elements, new_domain_indices)
 
-
     def parametrization(self, points):
         """
         Map 3D points to arc-length parameter s ∈ [0, total_length].
@@ -1083,7 +1084,59 @@ class LineGrid(ExtendedGrid):
             s_values.append(s)
         return _np.array(s_values)
 
+    def tangent_vector(self):
+        """
+        Compute and return the tangent vector at each vertex of the line grid.
+        
+        For each vertex, the tangent is computed as the normalized average
+        of the unit tangent vectors of all segments incident to that vertex.
+        This tangent can be used to project the current in a vector electric field.
+        
+        Returns
+        -------
+        tangents : _np.ndarray
+            A (3, N) array of unit tangent vectors, one for each vertex.
+        """
+        
+
+        N = self.number_of_vertices
+        M = self.number_of_elements
+
+        # Compute the unit tangent vector for each segment.
+        segment_tangents = _np.zeros((3, M))
+        for j in range(M):
+            v0 = self.vertices[:, self.elements[0, j]]
+            v1 = self.vertices[:, self.elements[1, j]]
+            diff = v1 - v0
+            norm_diff = _np.linalg.norm(diff)
+            if norm_diff > 0:
+                segment_tangents[:, j] = diff / norm_diff
+            else:
+                segment_tangents[:, j] = _np.zeros(3)
+
+        # Build a mapping from each vertex to the segments (elements) incident on it.
+        vertex_to_segments = {i: [] for i in range(N)}
+        for j in range(M):
+            for vertex in self.elements[:, j]:
+                vertex_to_segments[vertex].append(j)
+
     
+        tangents = _np.zeros((3, N))
+        for i in range(N):
+            segments = vertex_to_segments[i]
+            if len(segments) == 0:
+                tangents[:, i] = _np.zeros(3)
+            else:
+                avg_tangent = _np.mean(segment_tangents[:, segments], axis=1)
+                norm_avg = _np.linalg.norm(avg_tangent)
+                if norm_avg > 0:
+                    tangents[:, i] = avg_tangent / norm_avg
+                else:
+                    tangents[:, i] = _np.zeros(3)
+        return tangents
+
+
+
     def _compute_cumulative_lengths(self):
         """Precompute cumulative arc lengths from start to each segment."""
         lengths = self.integration_elements  # Segment lengths
@@ -1214,6 +1267,8 @@ class LineGrid(ExtendedGrid):
             neighbors = set(vertex_to_elements[endpoints[0]] + vertex_to_elements[endpoints[1]])
             edge_neighbors.append(tuple(neighbors))
         self._edge_neighbors = edge_neighbors
+
+    
 
 
 class MixedGrid(Grid, LineGrid):
@@ -1793,6 +1848,7 @@ class GridDataFloat(object):
         ("diameters", _numba.float64[:]),
         ("integration_elements", _numba.float64[:]),
         ("centroids", _numba.float64[:, :]),
+        ("wire_radius", _numba.float64[:]),
         ("domain_indices", _numba.uint32[:]),
         ("vertex_on_boundary", _numba.boolean[:]),
         ("element_neighbor_indices", _numba.uint32[:]),
@@ -1802,7 +1858,7 @@ class GridDataFloat(object):
 class LineGridDataDouble(object):
     def __init__(self, vertices, elements, edges, element_edges, volumes, normals,
                  jacobians, jac_inv_trans, diameters, integration_elements, centroids,
-                 domain_indices, vertex_on_boundary, element_neighbor_indices,
+                 wire_radius, domain_indices, vertex_on_boundary, element_neighbor_indices,
                  element_neighbor_indexptr):
         self.vertices = vertices
         self.elements = elements
@@ -1815,6 +1871,7 @@ class LineGridDataDouble(object):
         self.diameters = diameters
         self.integration_elements = integration_elements
         self.centroids = centroids
+        self.wire_radius = wire_radius
         self.domain_indices = domain_indices
         self.vertex_on_boundary = vertex_on_boundary
         self.element_neighbor_indices = element_neighbor_indices
@@ -1839,6 +1896,7 @@ class LineGridDataDouble(object):
         ("diameters", _numba.float32[:]),
         ("integration_elements", _numba.float32[:]),
         ("centroids", _numba.float32[:, :]),
+        ("wire_radius", _numba.float32[:]),
         ("domain_indices", _numba.uint32[:]),
         ("vertex_on_boundary", _numba.boolean[:]),
         ("element_neighbor_indices", _numba.uint32[:]),
@@ -1848,7 +1906,7 @@ class LineGridDataDouble(object):
 class LineGridDataFloat(object):
     def __init__(self, vertices, elements, edges, element_edges, volumes, normals,
                  jacobians, jac_inv_trans, diameters, integration_elements, centroids,
-                 domain_indices, vertex_on_boundary, element_neighbor_indices,
+                 wire_radius, domain_indices, vertex_on_boundary, element_neighbor_indices,
                  element_neighbor_indexptr):
         self.vertices = vertices
         self.elements = elements
@@ -1861,6 +1919,7 @@ class LineGridDataFloat(object):
         self.diameters = diameters
         self.integration_elements = integration_elements
         self.centroids = centroids
+        self.wire_radius = wire_radius
         self.domain_indices = domain_indices
         self.vertex_on_boundary = vertex_on_boundary
         self.element_neighbor_indices = element_neighbor_indices
@@ -2092,7 +2151,7 @@ def get_element_to_vertex_matrix_mixed(grid):
     for line elements only the first two vertices (the third is a pad) are used.
     """
     from scipy.sparse import csr_matrix
-    import numpy as np
+    import numpy as _np
 
     if grid.type != "Mixed Grid":
         raise ValueError("Grid must be of type Mixed Grid. For other grid types use get_element_to_vertex_matrix.")
@@ -2115,17 +2174,17 @@ def get_element_to_vertex_matrix_mixed(grid):
         if surface_mask[i]:
             # For a surface element, we use all three vertices.
             vertex_indices_list.append(elements[:, i])
-            vertex_element_indices_list.append(np.full(3, i, dtype="uint32"))
+            vertex_element_indices_list.append(_np.full(3, i, dtype="uint32"))
         elif line_mask[i]:
             # For a line element, we use only the first two entries.
             vertex_indices_list.append(elements[0:2, i])
-            vertex_element_indices_list.append(np.full(2, i, dtype="uint32"))
+            vertex_element_indices_list.append(_np.full(2, i, dtype="uint32"))
         else:
             raise ValueError(f"Element {i} is not marked as line or surface.")
 
-    vertex_indices = np.concatenate(vertex_indices_list)
-    vertex_element_indices = np.concatenate(vertex_element_indices_list)
-    data = np.ones(len(vertex_indices), dtype="uint32")
+    vertex_indices = _np.concatenate(vertex_indices_list)
+    vertex_element_indices = _np.concatenate(vertex_element_indices_list)
+    data = _np.ones(len(vertex_indices), dtype="uint32")
 
     return csr_matrix(
         (data, (vertex_indices, vertex_element_indices)),

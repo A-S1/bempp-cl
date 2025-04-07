@@ -111,6 +111,25 @@ def get_piola_transform(grid_data, elements, local_points):
             ) / grid_data.integration_elements[element]
     return result
 
+@_numba.jit(
+    nopython=True, parallel=False, error_model="numpy", fastmath=True, boundscheck=False
+)
+def get_line_transform(grid_data, elements, local_points):
+    npoints = local_points.shape[1]  # For a line, local_points is 1D (shape: (1, npoints))
+    nelements = len(elements)
+    # Produce a transformation of shape (nelements, 3, 1, npoints):
+    # For each element, at each quadrature point, we return a 3x1 "matrix" (a vector) that maps
+    # the 1D reference basis function to its 3D physical-space counterpart.
+    result = _np.zeros((nelements, 3, 1, npoints), dtype=local_points.dtype)
+    
+    for element_index in range(nelements):
+        element = elements[element_index]
+        # Compute the unit tangent vector for this element.
+        transform = grid_data.jacobians[element] / grid_data.integration_elements[element]
+        # Fill the result for all quadrature points. If the mapping is linear, this is constant.
+        for qp in range(npoints):
+            result[element_index, :, 0, qp] = transform
+    return result
 
 @_numba.jit(
     nopython=True, parallel=False, error_model="numpy", fastmath=True, boundscheck=False
@@ -133,6 +152,22 @@ def get_edge_lengths(grid_data, elements):
         result[element_index, 2] = _np.linalg.norm(
             grid_data.vertices[:, grid_data.elements[1, element]]
             - grid_data.vertices[:, grid_data.elements[2, element]]
+        )
+    return result
+
+@_numba.jit(
+    nopython=True, parallel=False, error_model="numpy", fastmath=True, boundscheck=False
+)
+def get_edge_lengths_line(grid_data, elements):
+    """Compute the edge lengths for line elements."""
+    nelements = len(elements)
+    result = _np.zeros((nelements), dtype=grid_data.vertices.dtype)
+
+    for element_index in _numba.prange(nelements):
+        element = elements[element_index]
+        result[element_index] = _np.linalg.norm(
+            grid_data.vertices[:, grid_data.elements[0, element]]
+            - grid_data.vertices[:, grid_data.elements[1, element]]
         )
     return result
 
@@ -2293,16 +2328,19 @@ def maxwell_efield_regular_assembler(
     result,
 ):
     """Evaluate Maxwell electric field kernel."""
+    # setup
     wavenumber = kernel_parameters[0] + 1j * kernel_parameters[1]
     result_type = result.dtype
     n_quad_points = len(quad_weights)
     n_test_elements = len(test_elements)
     n_trial_elements = len(trial_elements)
-
+    
+    # map to  global coordinates
     trial_global_points = get_global_points(
         trial_grid_data, trial_elements, quad_points
     )
 
+    # map basis function to the global coordinates usinfg the piola function
     test_basis_functions = get_piola_transform(
         test_grid_data, test_elements, quad_points
     )
@@ -2310,9 +2348,11 @@ def maxwell_efield_regular_assembler(
         trial_grid_data, trial_elements, quad_points
     )
 
+    # compute edge lengths for basis function normalization
     test_edge_lengths = get_edge_lengths(test_grid_data, test_elements)
     trial_edge_lengths = get_edge_lengths(trial_grid_data, trial_elements)
 
+    # precompute integration factors (quadrature weight multiplied by the local Jacobian determinant) for quadrature rule in trial element1s
     factors = _np.empty(
         n_quad_points * n_trial_elements, dtype=trial_global_points.dtype
     )
@@ -2325,11 +2365,13 @@ def maxwell_efield_regular_assembler(
                 ]
             )
 
+    # parallelized loop over test elements 
     for i in _numba.prange(n_test_elements):
         test_element = test_elements[i]
         local_result = _np.zeros(
             (n_trial_elements, nshape_test, nshape_trial), dtype=result_type
         )
+        #global qaudrature points 
         test_global_points = test_grid_data.local2global(test_element, quad_points)
         local_factors = _np.empty(
             n_trial_elements * n_quad_points, dtype=test_global_points.dtype
@@ -2337,18 +2379,21 @@ def maxwell_efield_regular_assembler(
         tmp = _np.empty(n_trial_elements * n_quad_points, dtype=result_type)
         is_adjacent = _np.zeros(n_trial_elements, dtype=_np.bool_)
 
+        #sets adjacency flag
         for trial_element_index in range(n_trial_elements):
             trial_element = trial_elements[trial_element_index]
             if grids_identical and elements_adjacent(
                 test_grid_data.elements, test_element, trial_element
             ):
                 is_adjacent[trial_element_index] = True
-
+        
+        # computes a combined integration factor by multiplying the trial element’s factor with the test element’s integration element
         for index in range(n_trial_elements * n_quad_points):
             local_factors[index] = (
                 factors[index] * test_grid_data.integration_elements[test_element]
             )
 
+        # quadrature loop over the test element, computes the kernel (Green’s function fs) values on the quadratur poinrs
         for test_point_index in range(n_quad_points):
             test_global_point = test_global_points[:, test_point_index]
             kernel_values = kernel_evaluator(
@@ -2359,11 +2404,13 @@ def maxwell_efield_regular_assembler(
                 kernel_parameters,
             )
 
+            # computes the kernel values multiplied by the integration factors and quadrature weights
             for index in range(n_trial_elements * n_quad_points):
                 tmp[index] = kernel_values[index] * (
                     local_factors[index] * quad_weights[test_point_index]
                 )
 
+            # loop over the trial elements to compute the local results and assembly over the trial elements continue at adjacent element (singularity)
             for trial_element_index in range(n_trial_elements):
                 if is_adjacent[trial_element_index]:
                     continue
@@ -2374,6 +2421,7 @@ def maxwell_efield_regular_assembler(
                     * trial_grid_data.integration_elements[trial_element]
                 )
 
+                # local matrix contribution accumulation
                 for test_fun_index in range(nshape_test):
                     for trial_fun_index in range(nshape_trial):
                         for quad_point_index in range(n_quad_points):
@@ -2397,6 +2445,7 @@ def maxwell_efield_regular_assembler(
                                 - divergence_product / (1j * wavenumber)
                             )
 
+        #assembly the local results into the global result matrix
         for trial_element_index in range(n_trial_elements):
             trial_element = trial_elements[trial_element_index]
             for test_fun_index in range(nshape_test):
@@ -2520,6 +2569,145 @@ def maxwell_efield_singular(
                     grid_data.integration_elements[test_element]
                     * grid_data.integration_elements[trial_element]
                 )
+
+
+@_numba.jit(
+    nopython=True, parallel=True, error_model="numpy", fastmath=True, boundscheck=False
+)
+def thinwire_efield_regular_assembler(
+    test_grid_data,
+    trial_grid_data,
+    nshape_test,
+    nshape_trial,
+    test_elements,
+    trial_elements,
+    test_multipliers,
+    trial_multipliers,
+    test_global_dofs,
+    trial_global_dofs,
+    test_normal_multipliers,
+    trial_normal_multipliers,
+    quad_points,
+    quad_weights,
+    kernel_evaluator,
+    kernel_parameters,
+    grids_identical,
+    test_shapeset,
+    trial_shapeset,
+    result,
+):
+    """
+    Evaluate the electric field integral for thin-wire (Pocklington) formulations.
+    """
+    #  Setup
+    wavenumber = kernel_parameters[0] + 1j * kernel_parameters[1]
+    k2 = wavenumber * wavenumber	
+
+    result_type = result.dtype
+    n_quad_points = len(quad_weights)
+    n_test_elements = len(test_elements)
+    n_trial_elements = len(trial_elements)
+
+    # --- Mapping from Reference to Global Coordinates ---
+    trial_global_points = get_global_points(trial_grid_data, trial_elements, quad_points)
+
+    # --- Basis Function Transformation on physical element ---
+
+    test_basis_functions = get_line_transform(test_grid_data, test_elements, quad_points)
+    trial_basis_functions = get_line_transform(trial_grid_data, trial_elements, quad_points)
+
+    test_basis_deriv = ...
+    trial_basis_deriv = ...
+
+    # For line elements, compute the length of each segment
+    test_edge_lengths = get_edge_lengths_line(test_grid_data, test_elements)
+    trial_edge_lengths = get_edge_lengths_line(trial_grid_data, trial_elements)
+
+    # --- Precompute Integration Factors ---
+    factors = _np.empty(n_quad_points * n_trial_elements, dtype=trial_global_points.dtype)
+    for trial_element_index in range(n_trial_elements):
+        for trial_point_index in range(n_quad_points):
+            factors[n_quad_points * trial_element_index + trial_point_index] = (
+                quad_weights[trial_point_index]
+                * trial_grid_data.integration_elements[trial_elements[trial_element_index]]
+            )
+
+    # --- Loop Over Test Elements ---
+    for i in _numba.prange(n_test_elements):
+        test_element = test_elements[i]
+        local_result = _np.zeros((n_trial_elements, nshape_test, nshape_trial), dtype=result_type)
+        # Map the quadrature points on the test element to global coordinates.
+        test_global_points = test_grid_data.local2global(test_element, quad_points)
+        # Local factors combine the integration measure from both test and trial elements.
+        local_factors = _np.empty(n_trial_elements * n_quad_points, dtype=test_global_points.dtype)
+        tmp = _np.empty(n_trial_elements * n_quad_points, dtype=result_type)
+        is_adjacent = _np.zeros(n_trial_elements, dtype=_np.bool_)
+
+        for trial_element_index in range(n_trial_elements):
+            trial_element = trial_elements[trial_element_index]
+            if grids_identical and elements_adjacent(test_grid_data.elements, test_element, trial_element):
+                is_adjacent[trial_element_index] = True
+
+        # Compute the combined integration
+        for index in range(n_trial_elements * n_quad_points):
+            local_factors[index] = (
+                factors[index] * test_grid_data.integration_elements[test_element]
+            )
+
+        # --- Quadrature Loop Over the Test Element ---
+        # For each quadrature point on the test element, evaluate the kernel function.
+        for test_point_index in range(n_quad_points):
+            test_global_point = test_global_points[:, test_point_index]
+            # Evaluate the kernel (Green') function between the current test global point and all trial global points.
+            kernel_values = kernel_evaluator(
+                test_global_point,
+                trial_global_points,
+                None,
+                None,
+                kernel_parameters,
+            )
+
+            # Weight the kernel values with the integration factors and the test quadrature weight.
+            for index in range(n_trial_elements * n_quad_points):
+                tmp[index] = kernel_values[index] * (local_factors[index] * quad_weights[test_point_index])
+
+
+            # --- Local Matrix Contribution Accumulation ---
+            for trial_element_index in range(n_trial_elements):
+                if is_adjacent[trial_element_index]:
+                    continue
+                
+                for test_fun_index in range(nshape_test):
+                    for trial_fun_index in range(nshape_trial):
+                        for quad_point_index in range(n_quad_points):
+                            # Here goes the actual kernel:
+                            #  dL int_(0,1)B(ksi_1,ksi_2)K(z,z_L*ksi_1+z_U*ksi_2)dksi_1
+                            # we need the I_1 and I_4 components (Wilton) (the other ones are going to be handled in the singular kernel)
+                            # another change of variable need to be applied (somewhere, maybe with the integration factor?)
+                            # we get I_1 = int_(U_1) B(ksi_1,ksi_2)K(z,z+(rho+a)sinh u)R_max du, I_4 = int_(U_4) B(ksi_1,ksi_2)K(z,z+(rho+a)sinh u)R_max du
+                            local_result[
+                                trial_element_index, test_fun_index, trial_fun_index
+                            ] += tmp[
+                                trial_element_index * n_quad_points + quad_point_index
+                            ] 
+                            continue 
+
+        # --- Global Assembly ---
+        for trial_element_index in range(n_trial_elements):
+            trial_element = trial_elements[trial_element_index]
+            for test_fun_index in range(nshape_test):
+                for trial_fun_index in range(nshape_trial):
+                    result[
+                        test_global_dofs[test_element, test_fun_index],
+                        trial_global_dofs[trial_element, trial_fun_index]
+                    ] += (
+                        local_result[trial_element_index, test_fun_index, trial_fun_index]
+                        * test_multipliers[test_element, test_fun_index]
+                        * trial_multipliers[trial_element, trial_fun_index]
+                        * test_edge_lengths[i]
+                        * trial_edge_lengths[trial_element_index]
+                    )
+
 
 
 @_numba.jit(
