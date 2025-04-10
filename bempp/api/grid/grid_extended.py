@@ -735,7 +735,7 @@ class Grid(ExtendedGrid):
 
 class LineGrid(ExtendedGrid):
     @_timeit
-    def __init__(self, vertices, elements, domain_indices=None, grid_id=None, scatter=True, wire_radius=0):
+    def __init__(self, vertices, elements, domain_indices=None, grid_id=None, scatter=True, wire_radius=0.01):
         """
         Create a grid from a vertices and an elements array.
         
@@ -793,6 +793,7 @@ class LineGrid(ExtendedGrid):
         self._compute_edge_neighbors()  
         self._compute_vertex_neighbors() 
         self._compute_cumulative_lengths()
+        self._compute_radius()
 
         self._grid_data_double = (
             self._vertices,

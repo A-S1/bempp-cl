@@ -221,6 +221,31 @@ def elements_adjacent(elements, index1, index2):
     )
 
 
+@_numba.jit(nopython=True, parallel=False, error_model="numpy", fastmath=True, boundscheck=False
+)
+def elements_adjacent_line(elements, index1, index2):
+    """Check if two line elements are adjacent, i.e. share at least one vertex.
+
+    Parameters
+    ----------
+    elements : 2D array of uint32
+        A 2 x M array of vertex indices defining the line segments.
+    index1, index2 : int
+        The indices of the two elements to be compared.
+    
+    Returns
+    -------
+    bool
+        True if the two line elements share a vertex.
+    """
+    return (
+        elements[0, index1] == elements[0, index2]
+        or elements[0, index1] == elements[1, index2]
+        or elements[1, index1] == elements[0, index2]
+        or elements[1, index1] == elements[1, index2]
+    )
+
+
 @_numba.jit(
     nopython=True, parallel=False, error_model="numpy", fastmath=True, boundscheck=False
 )
@@ -371,7 +396,7 @@ def laplace_adjoint_double_layer_singular(
     nopython=True, parallel=False, error_model="numpy", fastmath=True, boundscheck=False
 )
 def helmholtz_single_layer_regular(
-    test_point, trial_points, test_normal, trial_normals, kernel_parameters
+    test_point, trial_points, test_normal, trial_normals, kernel_parameters, wire_radius = None
 ):
     """Evaluate Helmholtz single layer for regular kernels."""
     wavenumber_real = kernel_parameters[0]
@@ -382,9 +407,15 @@ def helmholtz_single_layer_regular(
     output_real = _np.zeros(npoints, dtype=dtype)
     output_imag = _np.zeros(npoints, dtype=dtype)
     m_inv_4pi = dtype.type(M_INV_4PI)
-    for i in range(3):
-        for j in range(npoints):
-            dist[j] += (trial_points[i, j] - test_point[i]) ** 2
+    if wire_radius is None:
+        for i in range(3):
+            for j in range(npoints):
+                dist[j] += (trial_points[i, j] - test_point[i]) ** 2
+    else:
+        for i in range(3):
+            for j in range(npoints):
+                dist[j] += (trial_points[i, j] - test_point[i]) ** 2
+                dist[j] += wire_radius ** 2
     for j in range(npoints):
         dist[j] = _np.sqrt(dist[j])
     for j in range(npoints):
@@ -2608,6 +2639,8 @@ def thinwire_efield_regular_assembler(
     n_test_elements = len(test_elements)
     n_trial_elements = len(trial_elements)
 
+    wire_radius = test_grid_data.wire_radius
+
     # --- Mapping from Reference to Global Coordinates ---
     trial_global_points = get_global_points(trial_grid_data, trial_elements, quad_points)
 
@@ -2623,6 +2656,8 @@ def thinwire_efield_regular_assembler(
     test_edge_lengths = get_edge_lengths_line(test_grid_data, test_elements)
     trial_edge_lengths = get_edge_lengths_line(trial_grid_data, trial_elements)
 
+
+
     # --- Precompute Integration Factors ---
     factors = _np.empty(n_quad_points * n_trial_elements, dtype=trial_global_points.dtype)
     for trial_element_index in range(n_trial_elements):
@@ -2635,6 +2670,9 @@ def thinwire_efield_regular_assembler(
     # --- Loop Over Test Elements ---
     for i in _numba.prange(n_test_elements):
         test_element = test_elements[i]
+        # Compute wire radius of element
+        test_radius = wire_radius[test_element]
+        # Initialize the local result array for the current test element.
         local_result = _np.zeros((n_trial_elements, nshape_test, nshape_trial), dtype=result_type)
         # Map the quadrature points on the test element to global coordinates.
         test_global_points = test_grid_data.local2global(test_element, quad_points)
@@ -2645,7 +2683,7 @@ def thinwire_efield_regular_assembler(
 
         for trial_element_index in range(n_trial_elements):
             trial_element = trial_elements[trial_element_index]
-            if grids_identical and elements_adjacent(test_grid_data.elements, test_element, trial_element):
+            if grids_identical and elements_adjacent_line(test_grid_data.elements, test_element, trial_element):
                 is_adjacent[trial_element_index] = True
 
         # Compute the combined integration
@@ -2665,6 +2703,7 @@ def thinwire_efield_regular_assembler(
                 None,
                 None,
                 kernel_parameters,
+                test_radius,
             )
 
             # Weight the kernel values with the integration factors and the test quadrature weight.
@@ -2689,7 +2728,20 @@ def thinwire_efield_regular_assembler(
                                 trial_element_index, test_fun_index, trial_fun_index
                             ] += tmp[
                                 trial_element_index * n_quad_points + quad_point_index
-                            ] 
+                            ] * (
+                                -1j
+                                * wavenumber
+                                * test_basis_functions[
+                                    i, test_fun_index, :, test_point_index
+                                ] *
+                                    trial_basis_functions[
+                                        trial_element_index,
+                                        trial_fun_index,
+                                        :,
+                                        quad_point_index,
+                                    ]
+                                
+                            )
                             continue 
 
         # --- Global Assembly ---

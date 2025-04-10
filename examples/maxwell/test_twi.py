@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 
 
-grid = bempp.api.import_grid("examples/maxwell/plane1.msh")
+grid = bempp.api.import_grid("examples/maxwell/line_mesh.msh")
 # grid.plot()
 
 if hasattr(grid, 'line_mask'):
