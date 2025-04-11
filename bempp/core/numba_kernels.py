@@ -2605,7 +2605,7 @@ def maxwell_efield_singular(
 
 
 @_numba.jit(
-    nopython=True, parallel=True, error_model="numpy", fastmath=True, boundscheck=False, debug=True
+    nopython=False, parallel=False, error_model="numpy", fastmath=True, boundscheck=False, debug=True
 )
 def thinwire_efield_regular_assembler(
     test_grid_data,
