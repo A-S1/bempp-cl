@@ -17,28 +17,51 @@ def electric_field(
     from bempp.api.assembly.assembler import PotentialAssembler
     import bempp.api
 
-    if space.identifier != "rwg0":
-        raise ValueError("Space must be an RWG type function space.")
 
     if precision is None:
         precision = bempp.api.DEFAULT_PRECISION
 
-    operator_descriptor = OperatorDescriptor(
-        "maxwell_electric_field_potential",  # Identifier
-        [_np.real(wavenumber), _np.imag(wavenumber)],  # Options
-        "helmholtz_single_layer",  # Kernel type
-        "maxwell_electric_field",  # Assembly type
-        precision,  # Precision
-        True,  # Is complex
-        None,  # Singular part
-        3,  # Kernel dimension
-    )
+    if "triangle" in space.grid.type.lower():
+        if space.identifier != "rwg0":
+            raise ValueError("Space must be an RWG type function space for triangular elements.")
 
-    return PotentialOperator(
-        PotentialAssembler(
-            space, points, operator_descriptor, device_interface, assembler, parameters
+        operator_descriptor = OperatorDescriptor(
+            "maxwell_electric_field_potential",  # Identifier
+            [_np.real(wavenumber), _np.imag(wavenumber)],  # Options
+            "helmholtz_single_layer",  # Kernel type
+            "maxwell_electric_field",  # Assembly type
+            precision,  # Precision
+            True,  # Is complex
+            None,  # Singular part
+            3,  # Kernel dimension
         )
-    )
+
+        return PotentialOperator(
+            PotentialAssembler(
+                space, points, operator_descriptor, device_interface, assembler, parameters
+            )
+        )
+    
+    elif "line" in space.grid.type.lower():
+        if space.identifier != "pwl0":
+            raise ValueError("Space must be an PWL type function space for line elements.")
+
+        operator_descriptor = OperatorDescriptor(
+            "maxwell_electric_field_potential",  # Identifier
+            [_np.real(wavenumber), _np.imag(wavenumber)],  # Options
+            "helmholtz_single_layer",  # Kernel type
+            "maxwell_electric_field_thinwire",  # Assembly type
+            precision,  # Precision
+            True,  # Is complex
+            None,  # Singular part
+            3,  # Kernel dimension
+        )
+
+        return PotentialOperator(
+            PotentialAssembler(
+                space, points, operator_descriptor, device_interface, assembler, parameters
+            )
+        )
 
 
 def magnetic_field(
@@ -61,7 +84,7 @@ def magnetic_field(
 
     if precision is None:
         precision = bempp.api.DEFAULT_PRECISION
-
+    
     operator_descriptor = OperatorDescriptor(
         "maxwell_magnetic_field_potential",  # Identifier
         [_np.real(wavenumber), _np.imag(wavenumber)],  # Options

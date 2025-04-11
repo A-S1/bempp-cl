@@ -18,8 +18,11 @@ if hasattr(grid, 'junction_mask'):
 else:
     junc_elements = None
 
+space = bempp.api.function_space(grid, "PWL", 0)
+
 
 print("line elements =", line_elements)
 print("junction elements =", junc_elements)
 
 print("all elements =", grid.elements)
+print("grid type =", grid.type)

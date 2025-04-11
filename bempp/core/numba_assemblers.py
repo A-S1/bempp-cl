@@ -63,6 +63,7 @@ def dense_assembler(
     from bempp.core.numba_kernels import select_numba_kernels
     from bempp.api.utils.helpers import get_type
     from bempp.api.integration.triangle_gauss import rule
+    from bempp.api.integration.gauss import rule as line_rule
 
     (
         numba_assembly_function_regular,

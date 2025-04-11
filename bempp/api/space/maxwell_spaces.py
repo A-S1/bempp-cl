@@ -727,7 +727,7 @@ def _compute_pwl0_space_data(grid):
     # Set local multipliers to ones (they may be used for sign conventions).
     local_multipliers = _np.ones((grid.number_of_elements, 2), dtype=_np.float64)
     # All vertices are considered to be in the support.
-    support = _np.ones(global_dof_count, dtype=_np.bool_)
+    support = _np.ones(grid.number_of_elements, dtype=_np.bool_)
     return global_dof_count, support, local2global, local_multipliers
 
 @_numba.njit(cache=True)

@@ -15,26 +15,48 @@ def electric_field(
     precision=None,
 ):
     """Assemble the electric field boundary operator."""
-    if domain.identifier != "rwg0":
-        raise ValueError("Domain space must be an RWG type function space.")
+    if "triangle" in domain.grid.type.lower():
+        if domain.identifier != "rwg0":
+            raise ValueError("Domain space must be an RWG type function space.")
 
-    if dual_to_range.identifier != "snc0":
-        raise ValueError("Dual to range space must be an SNC type function space.")
+        if dual_to_range.identifier != "snc0":
+            raise ValueError("Dual to range space must be an SNC type function space.")
 
-    return _common.create_operator(
-        "maxwell_electric_field_boundary",
-        domain,
-        range_,
-        dual_to_range,
-        parameters,
-        assembler,
-        [_np.real(wavenumber), _np.imag(wavenumber)],
-        "helmholtz_single_layer",
-        "maxwell_electric_field",
-        device_interface,
-        precision,
-        True,
-    )
+        return _common.create_operator(
+            "maxwell_electric_field_boundary",
+            domain,
+            range_,
+            dual_to_range,
+            parameters,
+            assembler,
+            [_np.real(wavenumber), _np.imag(wavenumber)],
+            "helmholtz_single_layer",
+            "maxwell_electric_field",
+            device_interface,
+            precision,
+            True,
+        )
+
+    elif "line" in domain.grid.type.lower():
+        if domain.identifier != "pwl0":
+            raise ValueError("Domain space must be a PWL type function space.")
+
+        return _common.create_operator(
+            "maxwell_electric_field_boundary",
+            domain,
+            range_,
+            dual_to_range,
+            parameters,
+            assembler,
+            [_np.real(wavenumber), _np.imag(wavenumber)],
+            "helmholtz_single_layer",
+            "maxwell_electric_field_thinwire",
+            device_interface,
+            precision,
+            True,
+        )
+
+
 
 
 def magnetic_field(
