@@ -2651,8 +2651,7 @@ def thinwire_efield_regular_assembler(
     test_basis_functions = get_line_transform(test_grid_data, test_elements, quad_points)
     trial_basis_functions = get_line_transform(trial_grid_data, trial_elements, quad_points)
 
-    test_basis_deriv = ...
-    trial_basis_deriv = ...
+    print("Basis Functions: ", test_basis_functions)
 
     # For line elements, compute the length of each segment
     test_edge_lengths = get_edge_lengths_line(test_grid_data, test_elements)
@@ -2678,6 +2677,8 @@ def thinwire_efield_regular_assembler(
         local_result = _np.zeros((n_trial_elements, nshape_test, nshape_trial), dtype=result_type)
         # Map the quadrature points on the test element to global coordinates.
         test_global_points = test_grid_data.local2global(test_element, quad_points)
+
+        print("Test Global Points: ", test_global_points)	
         # Local factors combine the integration measure from both test and trial elements.
         local_factors = _np.empty(n_trial_elements * n_quad_points, dtype=test_global_points.dtype)
         tmp = _np.empty(n_trial_elements * n_quad_points, dtype=result_type)
@@ -2744,7 +2745,7 @@ def thinwire_efield_regular_assembler(
                                     ]
                                 
                             )
-                            continue 
+            print("Local Result: ", local_result)  
 
         # --- Global Assembly ---
         for trial_element_index in range(n_trial_elements):
