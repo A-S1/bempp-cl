@@ -71,7 +71,13 @@ def dense_assembler(
     ) = select_numba_kernels(operator_descriptor, mode="regular")
 
     order = parameters.quadrature.regular
-    quad_points, quad_weights = rule(order)
+
+    if "line" in domain.grid.type.lower():
+        # Use line quadrature rule
+        quad_points, quad_weights = line_rule(order)
+        
+    elif "triangle" in domain.grid.type.lower():
+        quad_points, quad_weights = rule(order)
 
     # Perform Numba assembly always in double precision
     # precision = operator_descriptor.precision

@@ -2728,28 +2728,24 @@ def thinwire_efield_regular_assembler(
                             # another change of variable need to be applied (somewhere, maybe with the integration factor?)
                             # we get I_1 = int_(U_1) B(ksi_1,ksi_2)K(z,z+(rho+a)sinh u)R_max du, I_4 = int_(U_4) B(ksi_1,ksi_2)K(z,z+(rho+a)sinh u)R_max du
                             # Compute the dot product (or sum) over the vector components.
-                            # local_result[
-                            #     trial_element_index, test_fun_index, trial_fun_index
-                            # ] += tmp[
-                            #     trial_element_index * n_quad_points + quad_point_index
-                            # ] * (
-                            #     -1j
-                            #     * wavenumber
-                            #     * test_basis_functions[
-                            #         i, test_fun_index, :, test_point_index
-                            #     ].dot(
-                            #         trial_basis_functions[
-                            #             trial_element_index,
-                            #             trial_fun_index,
-                            #             :,
-                            #             quad_point_index,
-                            #         ]
-                            #     )
-
-                            # )
                             local_result[
-                                 trial_element_index, test_fun_index, trial_fun_index
-                             ] += 1
+                                trial_element_index, test_fun_index, trial_fun_index
+                            ] += tmp[
+                                trial_element_index * n_quad_points + quad_point_index
+                            ] * (
+                                -1j
+                                * wavenumber
+                                * test_basis_functions[
+                                    i, test_fun_index, :, test_point_index
+                                ].dot(
+                                    trial_basis_functions[
+                                        trial_element_index,
+                                        trial_fun_index,
+                                        :,
+                                        quad_point_index,
+                                    ]
+                                )
+                            )
             print("Local Result: ", local_result)  
 
         # --- Global Assembly ---
