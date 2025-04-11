@@ -2605,7 +2605,7 @@ def maxwell_efield_singular(
 
 
 @_numba.jit(
-    nopython=False, parallel=True, error_model="numpy", fastmath=True, boundscheck=False
+    nopython=True, parallel=True, error_model="numpy", fastmath=True, boundscheck=False
 )
 def thinwire_efield_regular_assembler(
     test_grid_data,
@@ -2729,7 +2729,7 @@ def thinwire_efield_regular_assembler(
                             # we get I_1 = int_(U_1) B(ksi_1,ksi_2)K(z,z+(rho+a)sinh u)R_max du, I_4 = int_(U_4) B(ksi_1,ksi_2)K(z,z+(rho+a)sinh u)R_max du
                             # Compute the dot product (or sum) over the vector components.
                             dot_prod = _np.dot(
-                                test_basis_functions[i, test_fun_index, :, test_point_index],
+                                test_basis_functions[i, test_fun_index, :, test_point_index, quad_point_index],
                                 trial_basis_functions[trial_element_index, trial_fun_index, :, quad_point_index]
                             )
                             local_result[trial_element_index, test_fun_index, trial_fun_index] += (
