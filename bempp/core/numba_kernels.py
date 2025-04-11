@@ -2605,7 +2605,7 @@ def maxwell_efield_singular(
 
 
 @_numba.jit(
-    nopython=True, parallel=True, error_model="numpy", fastmath=True, boundscheck=False
+    nopython=True, parallel=True, error_model="numpy", fastmath=True, boundscheck=False, debug=True
 )
 def thinwire_efield_regular_assembler(
     test_grid_data,
@@ -2737,7 +2737,14 @@ def thinwire_efield_regular_assembler(
                                 * wavenumber
                                 * test_basis_functions[
                                     i, test_fun_index, :, test_point_index
-                                ]
+                                ].dot(
+                                    trial_basis_functions[
+                                        trial_element_index,
+                                        trial_fun_index,
+                                        :,
+                                        quad_point_index,
+                                    ]
+                                )
                             )
             print("Local Result: ", local_result)  
 
