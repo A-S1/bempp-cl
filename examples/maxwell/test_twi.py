@@ -22,6 +22,21 @@ else:
 space = bempp.api.function_space(grid, "PWL", 0)
 elec = bempp.api.operators.boundary.maxwell.electric_field(space, space, space, k)
 
+@bempp.api.complex_callable
+def tangential_trace(x, n, domain_index, result):
+    incident_field = np.array([np.exp(1j * k * x[2]), 0.0 * x[2], 0.0 * x[2]])
+    result[:] = np.cross(incident_field, n)
+
+
+trace_fun = bempp.api.GridFunction(space, fun=tangential_trace, dual_space=space)
+# -
+
+# We use a direct LU solver to solve the system.
+
+from bempp.api.linalg import lu
+
+lambda_data = lu(elec, trace_fun)
+
 
 print("line elements =", line_elements)
 print("junction elements =", junc_elements)

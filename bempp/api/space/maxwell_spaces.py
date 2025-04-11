@@ -913,7 +913,7 @@ def _numba_snc0_surface_curl(
     return result
 
 
-@_numba.njit()
+# @_numba.njit()
 def _numba_pwl0_evaluate(
     element_index,
     shapeset_evaluate,  # For PWL functions this is not used but kept for interface compatibility.
