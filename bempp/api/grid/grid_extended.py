@@ -795,7 +795,7 @@ class LineGrid(ExtendedGrid):
         self._compute_cumulative_lengths()
         self._compute_radius(wire_radius)
 
-        self._grid_data_double = (
+        self._grid_data_double = LineGridDataDouble(
             self._vertices,
             self._elements,
             self._edges,
