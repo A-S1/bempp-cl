@@ -192,7 +192,7 @@ def get_global_points(grid_data, elements, local_points):
     nopython=True, parallel=False, error_model="numpy", fastmath=True, boundscheck=False
 )
 def get_global_points_line(grid_data, elements, local_points):
-     """
+    """
     Get global points for 1D elements (line segments).
 
     Parameters:
