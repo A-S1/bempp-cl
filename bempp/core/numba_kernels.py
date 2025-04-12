@@ -192,14 +192,42 @@ def get_global_points(grid_data, elements, local_points):
     nopython=True, parallel=False, error_model="numpy", fastmath=True, boundscheck=False
 )
 def get_global_points_line(grid_data, elements, local_points):
-    """Get global points."""
-    npoints = local_points.shape[1]
+     """
+    Get global points for 1D elements (line segments).
+
+    Parameters:
+        grid_data   : An object containing a 1D array 'vertices' of global coordinates.
+                      Example: grid_data.vertices.shape = (n_vertices,)
+        elements    : An iterable of 1D elements where each element is defined by a pair
+                      of indices [A_index, B_index] corresponding to its endpoints.
+        local_points: A 1D array of local coordinate values (typically in [0, 1]),
+                      of shape (npoints,), where interpolation is to be evaluated.
+
+    Returns:
+        output: A 1D array containing the computed global coordinates for all elements.
+                The array is arranged such that the global coordinates for element i are stored
+                consecutively, with each element contributing npoints entries.
+    """
+    # Number of local evaluation points
+    npoints = local_points.shape[0]
+    # Number of elements (each element is defined by 2 endpoints)
     nelements = len(elements)
-    output = _np.empty((2, nelements * npoints), dtype=grid_data.vertices.dtype)
-    for index, element in enumerate(elements):
-        output[:, npoints * index : npoints * (1 + index)] = grid_data.local2global(
-            element, local_points
-        )
+
+    # Create an output array to store all global coordinate results.
+    output = _np.empty(nelements * npoints, dtype=grid_data.vertices.dtype)
+    
+    # Loop over each element
+    for index in range(nelements):
+        # Retrieve endpoints using the indices stored in the element.
+        # A and B are scalar global coordinates.
+        A = grid_data.vertices[elements[index][0]]
+        B = grid_data.vertices[elements[index][1]]
+        # Loop over each local point to interpolate between A and B.
+        for j in range(npoints):
+            xi = local_points[j]
+            # Perform linear interpolation.
+            output[index * npoints + j] = (1 - xi) * A + xi * B
+
     return output
 
 
