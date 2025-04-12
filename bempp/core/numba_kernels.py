@@ -188,6 +188,20 @@ def get_global_points(grid_data, elements, local_points):
         )
     return output
 
+@_numba.jit(
+    nopython=True, parallel=False, error_model="numpy", fastmath=True, boundscheck=False
+)
+def get_global_points_line(grid_data, elements, local_points):
+    """Get global points."""
+    npoints = local_points.shape[1]
+    nelements = len(elements)
+    output = _np.empty((2, nelements * npoints), dtype=grid_data.vertices.dtype)
+    for index, element in enumerate(elements):
+        output[:, npoints * index : npoints * (1 + index)] = grid_data.local2global(
+            element, local_points
+        )
+    return output
+
 
 @_numba.jit(
     nopython=True, parallel=False, error_model="numpy", fastmath=True, boundscheck=False
@@ -2644,7 +2658,7 @@ def thinwire_efield_regular_assembler(
     wire_radius = test_grid_data.wire_radius
 
     # --- Mapping from Reference to Global Coordinates ---
-    trial_global_points = get_global_points(trial_grid_data, trial_elements, quad_points)
+    trial_global_points = get_global_points_line(trial_grid_data, trial_elements, quad_points)
 
     # --- Basis Function Transformation on physical element ---
 
