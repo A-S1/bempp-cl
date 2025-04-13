@@ -117,7 +117,7 @@ def get_piola_transform(grid_data, elements, local_points):
     nopython=True, parallel=False, error_model="numpy", fastmath=True, boundscheck=False
 )
 def get_line_transform(grid_data, elements, local_points):
-    npoints = local_points.shape[1]  # For a line, local_points is 1D (shape: (1, npoints))
+    npoints = len(local_points)  # For a line, local_points is 1D (shape: (1, npoints))
     nelements = len(elements)
     # Produce a transformation of shape (nelements, 3, 1, npoints):
     # For each element, at each quadrature point, we return a 3x1 "matrix" (a vector) that maps
