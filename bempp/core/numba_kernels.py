@@ -2712,7 +2712,7 @@ def thinwire_efield_regular_assembler(
         # --- Quadrature Loop Over the Test Element ---
         # For each quadrature point on the test element, evaluate the kernel function.
         for test_point_index in range(n_quad_points):
-            test_global_point = test_global_points[test_point_index]
+            test_global_point = test_global_points[:, test_point_index]
             # Evaluate the kernel (Green') function between the current test global point and all trial global points.
             kernel_values = kernel_evaluator(
                 test_global_point,
