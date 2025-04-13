@@ -408,9 +408,9 @@ def laplace_adjoint_double_layer_singular(
     return output
 
 
-@_numba.jit(
-    nopython=True, parallel=False, error_model="numpy", fastmath=True, boundscheck=False
-)
+# @_numba.jit(
+#     nopython=True, parallel=False, error_model="numpy", fastmath=True, boundscheck=False
+# )
 def helmholtz_single_layer_regular(
     test_point, trial_points, test_normal, trial_normals, kernel_parameters, wire_radius = None
 ):
@@ -2618,9 +2618,9 @@ def maxwell_efield_singular(
                 )
 
 
-@_numba.jit(
-    nopython=True, parallel=True, error_model="numpy", fastmath=True, boundscheck=False
-)
+# @_numba.jit(
+#     nopython=True, parallel=True, error_model="numpy", fastmath=True, boundscheck=False
+# )
 def thinwire_efield_regular_assembler(
     test_grid_data,
     trial_grid_data,
@@ -2683,7 +2683,8 @@ def thinwire_efield_regular_assembler(
             )
 
     # --- Loop Over Test Elements ---
-    for i in _numba.prange(n_test_elements):
+    # for i in _numba.prange(n_test_elements):
+    for i in range(n_test_elements):
         test_element = test_elements[i]
         # Compute wire radius of element
         test_radius = wire_radius[test_element]
@@ -2711,6 +2712,8 @@ def thinwire_efield_regular_assembler(
 
         # --- Quadrature Loop Over the Test Element ---
         # For each quadrature point on the test element, evaluate the kernel function.
+        print("Test Points: ", test_global_points)
+        print("Trial Points: ", trial_global_points)
         for test_point_index in range(n_quad_points):
             test_global_point = test_global_points[test_point_index]
             # Evaluate the kernel (Green') function between the current test global point and all trial global points.
