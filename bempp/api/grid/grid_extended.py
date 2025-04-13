@@ -1880,7 +1880,7 @@ class LineGridDataDouble(object):
 
     def local2global(self, elem_index, local_coords):
         # Map a point in local coordinates to global coordinates for a line segment.
-        return (self.vertices[:, self.elements[0, elem_index]] +
+        return _np.expand_dims(self.vertices[:, self.elements[0, elem_index]] +
                 self.jacobians[elem_index].dot(local_coords))
 
 
@@ -1927,7 +1927,7 @@ class LineGridDataFloat(object):
         self.element_neighbor_indexptr = element_neighbor_indexptr
 
     def local2global(self, elem_index, local_coords):
-        return (self.vertices[:, self.elements[0, elem_index]] +
+        return _np.expand_dims(self.vertices[:, self.elements[0, elem_index]] +
                 self.jacobians[elem_index].dot(local_coords))
     
 
