@@ -430,7 +430,7 @@ def helmholtz_single_layer_regular(
     else:
         for i in range(3):
             for j in range(npoints):
-                dist[j] += (trial_points[i, j] - test_point[i]) ** 2
+                dist[j] += (trial_points[j] - test_point[i]) ** 2
                 dist[j] += wire_radius ** 2
     for j in range(npoints):
         dist[j] = _np.sqrt(dist[j])
@@ -2691,7 +2691,6 @@ def thinwire_efield_regular_assembler(
         local_result = _np.zeros((n_trial_elements, nshape_test, nshape_trial), dtype=result_type)
         # Map the quadrature points on the test element to global coordinates.
         test_global_points = test_grid_data.local2global(test_element, quad_points)
-        test_global_points = test_global_points.reshape(1, len(test_global_points))
 
         print("Test Global Points: ", test_global_points)	
         # Local factors combine the integration measure from both test and trial elements.
@@ -2713,7 +2712,7 @@ def thinwire_efield_regular_assembler(
         # --- Quadrature Loop Over the Test Element ---
         # For each quadrature point on the test element, evaluate the kernel function.
         for test_point_index in range(n_quad_points):
-            test_global_point = test_global_points[:, test_point_index]
+            test_global_point = test_global_points[test_point_index]
             # Evaluate the kernel (Green') function between the current test global point and all trial global points.
             kernel_values = kernel_evaluator(
                 test_global_point,
