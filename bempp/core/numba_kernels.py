@@ -2691,6 +2691,7 @@ def thinwire_efield_regular_assembler(
         local_result = _np.zeros((n_trial_elements, nshape_test, nshape_trial), dtype=result_type)
         # Map the quadrature points on the test element to global coordinates.
         test_global_points = test_grid_data.local2global(test_element, quad_points)
+        test_global_points = test_global_points.reshape(1, len(test_global_points))
 
         print("Test Global Points: ", test_global_points)	
         # Local factors combine the integration measure from both test and trial elements.
