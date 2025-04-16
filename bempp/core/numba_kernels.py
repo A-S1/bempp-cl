@@ -2698,6 +2698,7 @@ def thinwire_efield_regular_assembler(
         # for all trial elements and for each trial basis function.
         # Shape: (n_quad_points, n_trial_elements, nshape_trial)
         LG_int = _np.zeros((n_quad_points, n_trial_elements, nshape_trial), dtype=result_type)
+        test_radius = wire_radius[test_element]
 
         for q in range(n_quad_points):
             # Get the current test global coordinate (as a 1D array of length 1)
@@ -2709,7 +2710,7 @@ def thinwire_efield_regular_assembler(
                 None,
                 None,
                 kernel_parameters,
-                wire_radius,
+                test_radius,
             )
             # kernel_values is assumed to be a flat array of length (n_trial_elements * n_quad_points)
             # Now, accumulate the contributions over the trial quadrature points for each trial element and trial basis function.
