@@ -2675,9 +2675,9 @@ def thinwire_efield_regular_assembler(
     factors = _np.empty(n_trial_elements * n_quad_points, dtype=trial_global_points.dtype)
     for trial_element_index in range(n_trial_elements):
         trial_element = trial_elements[trial_element_index]
-        for qp in range(n_quad_points):
-            factors[trial_element_index * n_quad_points + qp] = (
-                quad_weights[qp] * trial_edge_lengths[trial_element]
+        for trial_point_index in range(n_quad_points):
+            factors[trial_element_index * n_quad_points + trial_point_index] = (
+                quad_weights[trial_point_index] * trial_edge_lengths[trial_element]
             )
 
     # --- Main Assembly Loop over Test Elements (Parallelized) ---
@@ -2727,18 +2727,15 @@ def thinwire_efield_regular_assembler(
             for trial_element_index in range(n_trial_elements):
                 for trial_fun_index in range(nshape_trial):
                     summation = 0.0 + 0.0j
-                    for qp in range(n_quad_points):
-                        idx = trial_element_index * n_quad_points + qp
-                        summation += kernel_values[idx] * trial_basis_functions[trial_element_index, trial_fun_index, 0, qp] * factors[idx]
+                    for trial_point_index in range(n_quad_points):
+                        idx = trial_element_index * n_quad_points + trial_point_index
+                        summation += kernel_values[idx] * trial_basis_functions[trial_element_index, trial_fun_index, 0, trial_point_index] * factors[idx]
                     LG_int[test_point_index, trial_element_index, trial_fun_index] = summation
 
         # --- Compute the Derivative of the Inner Integral with Respect to z ---
         # Use a central difference scheme (forward/backward differences at boundaries).
         dLG_int = _np.zeros((n_quad_points, n_trial_elements, nshape_trial), dtype=result_type)
-        for trial_element_index in range(n_trial_elements):
-            if is_adjacent[trial_element_index]:
-                    continue
-            
+        for trial_element_index in range(n_trial_elements):            
             for trial_fun_index in range(nshape_trial):
                 for quad_point_index in range(n_quad_points):
                     if quad_point_index == 0:
@@ -2773,6 +2770,8 @@ def thinwire_efield_regular_assembler(
         for quad_point_index in range(n_quad_points):
             for test_fun_index in range(nshape_test):
                 for trial_element_index in range(n_trial_elements):
+                    if is_adjacent[trial_element_index]:
+                        continue
                     for trial_fun_index in range(nshape_trial):
                         integrand = (test_basis_deriv[test_fun_index, quad_point_index] * dLG_int[quad_point_index, trial_element_index, trial_fun_index] +
                                      k2 * test_basis_functions[i, test_fun_index, 0, quad_point_index] * LG_int[quad_point_index, trial_element_index, trial_fun_index])
