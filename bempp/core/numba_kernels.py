@@ -2736,8 +2736,8 @@ def thinwire_efield_regular_assembler(
         # Use a central difference scheme (forward/backward differences at boundaries).
         dLG_int = _np.zeros((n_quad_points, n_trial_elements, nshape_trial), dtype=result_type)
         for trial_element_index in range(n_trial_elements):
-            if is_adjacent[trial_element_index]:
-                    continue
+            # if is_adjacent[trial_element_index]:
+            #         continue
             
             for trial_fun_index in range(nshape_trial):
                 for quad_point_index in range(n_quad_points):
