@@ -2781,18 +2781,18 @@ def thinwire_efield_regular_assembler(
         # --- Accumulate the Local Results into the Global Matrix ---
         # Here we assume that the global 'result' array is assembled such that the block
         # corresponding to test element i and trial element trial_element_index is stored at result[i, trial_element_index, :, :]
-        for trial_element_index in range(n_trial_elements):
-            trial_element = trial_elements[trial_element_index]
-            for test_fun_index in range(nshape_test):
-                for trial_fun_index in range(nshape_trial):
-                    result[
-                                    test_global_dofs[test_element, test_fun_index],
-                                    trial_global_dofs[trial_element, trial_fun_index],
-                    ] += (
-                                    local_result[
-                                        trial_element_index, test_fun_index, trial_fun_index
-                                    ]
-                    )
+        # for trial_element_index in range(n_trial_elements):
+        #     trial_element = trial_elements[trial_element_index]
+        #     for test_fun_index in range(nshape_test):
+        #         for trial_fun_index in range(nshape_trial):
+        #             result[
+        #                             test_global_dofs[test_element, test_fun_index],
+        #                             trial_global_dofs[trial_element, trial_fun_index],
+        #             ] += (
+        #                             local_result[
+        #                                 trial_element_index, test_fun_index, trial_fun_index
+        #                             ]
+        #             )
 
 
 
