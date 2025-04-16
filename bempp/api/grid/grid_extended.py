@@ -1880,8 +1880,9 @@ class LineGridDataDouble(object):
 
     def local2global(self, elem_index, local_coords):
         """Map local to global coordinates for a line element."""
-        return (self.vertices[:, self.elements[0, elem_index]]+ \
-            self.jacobians[elem_index].dot(local_coords))
+        return _np.expand_dims(
+            self.vertices[:, self.elements[0, elem_index]], 1
+        ) + self.jacobians[elem_index].dot(local_coords)
 
 
 @_numba.experimental.jitclass(
@@ -1928,8 +1929,9 @@ class LineGridDataFloat(object):
 
     def local2global(self, elem_index, local_coords):
         """Map local to global coordinates for a line element."""
-        return (self.vertices[:, self.elements[0, elem_index]]+ \
-            self.jacobians[elem_index].dot(local_coords))
+        return return _np.expand_dims(
+            self.vertices[:, self.elements[0, elem_index]], 1
+        ) + self.jacobians[elem_index].dot(local_coords)
     
 
 class ElementGeometry(object):
