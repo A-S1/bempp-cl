@@ -2646,7 +2646,7 @@ def thinwire_efield_regular_assembler(
     """
     Evaluate the electric field integral for thin-wire (Pocklington) formulations.
     """
-    #  Setup
+    # --- Setup ---
     wavenumber = kernel_parameters[0] + 1j * kernel_parameters[1]
     k2 = wavenumber * wavenumber	
 
@@ -2657,127 +2657,118 @@ def thinwire_efield_regular_assembler(
 
     wire_radius = test_grid_data.wire_radius
 
-    # --- Mapping from Reference to Global Coordinates ---
+    # --- Mapping from Reference to Global Coordinates (Trial Elements) ---
     trial_global_points = get_global_points_line(trial_grid_data, trial_elements, quad_points)
 
-    # --- Basis Function Transformation on physical element ---
-
+    # --- Basis Function Transformation on Physical Elements (Line Elements) ---
     test_basis_functions = get_line_transform(test_grid_data, test_elements, quad_points)
     trial_basis_functions = get_line_transform(trial_grid_data, trial_elements, quad_points)
+    # For debugging purposes (only works in non-parallel mode)
+    # print("Basis Functions: ", test_basis_functions)
 
-    print("Basis Functions: ", test_basis_functions)
-
-    # For line elements, compute the length of each segment
+    # --- Compute Edge Lengths for Each Segment ---
     test_edge_lengths = get_edge_lengths_line(test_grid_data, test_elements)
     trial_edge_lengths = get_edge_lengths_line(trial_grid_data, trial_elements)
 
-
-
-    # --- Precompute Integration Factors ---
-    factors = _np.empty(n_quad_points * n_trial_elements, dtype=trial_global_points.dtype)
+    # --- Precompute Integration Factors for Trial Elements ---
+    # For each trial element, we multiply the quadrature weight with the trial element’s length.
+    factors = _np.empty(n_trial_elements * n_quad_points, dtype=trial_global_points.dtype)
     for trial_element_index in range(n_trial_elements):
-        for trial_point_index in range(n_quad_points):
-            factors[n_quad_points * trial_element_index + trial_point_index] = (
-                quad_weights[trial_point_index]
-                * trial_grid_data.integration_elements[trial_elements[trial_element_index]]
+        trial_element = trial_elements[trial_element_index]
+        for qp in range(n_quad_points):
+            factors[trial_element_index * n_quad_points + qp] = (
+                quad_weights[qp] * trial_edge_lengths[trial_element]
             )
 
-    # --- Loop Over Test Elements ---
+    # --- Main Assembly Loop over Test Elements (Parallelized) ---
     for i in _numba.prange(n_test_elements):
         test_element = test_elements[i]
-        # Compute wire radius of element
-        test_radius = wire_radius[test_element]
-        # Initialize the local result array for the current test element.
+        # local_result will be assembled into the global 'result'
         local_result = _np.zeros((n_trial_elements, nshape_test, nshape_trial), dtype=result_type)
+        
         # Map the quadrature points on the test element to global coordinates.
+        # Assumed shape is (1, n_quad_points) for 1D (wire axis) data.
         test_global_points = test_grid_data.local2global(test_element, quad_points)
-        test_global_points = test_global_points.reshape(1, len(test_global_points))
+        
+        # The integration factor for the test element (its segment length)
+        local_test_factor = test_edge_lengths[test_element]
 
-        print("Test Global Points: ", test_global_points)	
-        # Local factors combine the integration measure from both test and trial elements.
-        local_factors = _np.empty(n_trial_elements * n_quad_points, dtype=test_global_points.dtype)
-        tmp = _np.empty(n_trial_elements * n_quad_points, dtype=result_type)
-        is_adjacent = _np.zeros(n_trial_elements, dtype=_np.bool_)
+        # --- Compute the Inner Integral: G(z) = ∫ g(z,z') φ(z') dz' for each test quadrature point ---
+        # Allocate an array to hold the computed inner integral for each test quadrature point,
+        # for all trial elements and for each trial basis function.
+        # Shape: (n_quad_points, n_trial_elements, nshape_trial)
+        LG_int = _np.zeros((n_quad_points, n_trial_elements, nshape_trial), dtype=result_type)
 
-        for trial_element_index in range(n_trial_elements):
-            trial_element = trial_elements[trial_element_index]
-            if grids_identical and elements_adjacent_line(test_grid_data.elements, test_element, trial_element):
-                is_adjacent[trial_element_index] = True
-
-        # Compute the combined integration
-        for index in range(n_trial_elements * n_quad_points):
-            local_factors[index] = (
-                factors[index] * test_grid_data.integration_elements[test_element]
-            )
-
-        # --- Quadrature Loop Over the Test Element ---
-        # For each quadrature point on the test element, evaluate the kernel function.
-        for test_point_index in range(n_quad_points):
-            test_global_point = test_global_points[:, test_point_index]
-            # Evaluate the kernel (Green') function between the current test global point and all trial global points.
+        for q in range(n_quad_points):
+            # Get the current test global coordinate (as a 1D array of length 1)
+            test_global_point = _np.array([test_global_points[0, q]])
+            # Evaluate the kernel at this test point vs. all trial quadrature points.
             kernel_values = kernel_evaluator(
                 test_global_point,
                 trial_global_points,
                 None,
                 None,
                 kernel_parameters,
-                test_radius,
+                wire_radius,
             )
+            # kernel_values is assumed to be a flat array of length (n_trial_elements * n_quad_points)
+            # Now, accumulate the contributions over the trial quadrature points for each trial element and trial basis function.
+            for r in range(n_trial_elements):
+                for b in range(nshape_trial):
+                    summation = 0.0 + 0.0j
+                    for qp in range(n_quad_points):
+                        idx = r * n_quad_points + qp
+                        summation += kernel_values[idx] * trial_basis_functions[r, b, 0, qp] * factors[idx]
+                    LG_int[q, r, b] = summation
 
-            # Weight the kernel values with the integration factors and the test quadrature weight.
-            for index in range(n_trial_elements * n_quad_points):
-                tmp[index] = kernel_values[index] * (local_factors[index] * quad_weights[test_point_index])
+        # --- Compute the Derivative of the Inner Integral with Respect to z ---
+        # Use a central difference scheme (forward/backward differences at boundaries).
+        dLG_int = _np.zeros((n_quad_points, n_trial_elements, nshape_trial), dtype=result_type)
+        for r in range(n_trial_elements):
+            for b in range(nshape_trial):
+                for q in range(n_quad_points):
+                    if q == 0:
+                        dz = test_global_points[0, 1] - test_global_points[0, 0]
+                        dLG_int[q, r, b] = (LG_int[q+1, r, b] - LG_int[q, r, b]) / dz
+                    elif q == n_quad_points - 1:
+                        dz = test_global_points[0, n_quad_points-1] - test_global_points[0, n_quad_points-2]
+                        dLG_int[q, r, b] = (LG_int[q, r, b] - LG_int[q-1, r, b]) / dz
+                    else:
+                        dz = test_global_points[0, q+1] - test_global_points[0, q-1]
+                        dLG_int[q, r, b] = (LG_int[q+1, r, b] - LG_int[q-1, r, b]) / dz
 
+        # --- Compute the Derivative of the Test Basis Functions with Respect to z ---
+        # Allocate an array: shape (nshape_test, n_quad_points)
+        test_basis_deriv = _np.zeros((nshape_test, n_quad_points), dtype=test_basis_functions.dtype)
+        for a in range(nshape_test):
+            for q in range(n_quad_points):
+                if q == 0:
+                    dz = test_global_points[0, 1] - test_global_points[0, 0]
+                    test_basis_deriv[a, q] = (test_basis_functions[i, a, 0, q+1] - test_basis_functions[i, a, 0, q]) / dz
+                elif q == n_quad_points - 1:
+                    dz = test_global_points[0, n_quad_points-1] - test_global_points[0, n_quad_points-2]
+                    test_basis_deriv[a, q] = (test_basis_functions[i, a, 0, q] - test_basis_functions[i, a, 0, q-1]) / dz
+                else:
+                    dz = test_global_points[0, q+1] - test_global_points[0, q-1]
+                    test_basis_deriv[a, q] = (test_basis_functions[i, a, 0, q+1] - test_basis_functions[i, a, 0, q-1]) / dz
 
-            # --- Local Matrix Contribution Accumulation ---
-            for trial_element_index in range(n_trial_elements):
-                if is_adjacent[trial_element_index]:
-                    continue
-                
-                for test_fun_index in range(nshape_test):
-                    for trial_fun_index in range(nshape_trial):
-                        for quad_point_index in range(n_quad_points):
-                            # Here goes the actual kernel:
-                            #  dL int_(0,1)B(ksi_1,ksi_2)K(z,z_L*ksi_1+z_U*ksi_2)dksi_1
-                            # we need the I_1 and I_4 components (Wilton) (the other ones are going to be handled in the singular kernel)
-                            # another change of variable need to be applied (somewhere, maybe with the integration factor?)
-                            # we get I_1 = int_(U_1) B(ksi_1,ksi_2)K(z,z+(rho+a)sinh u)R_max du, I_4 = int_(U_4) B(ksi_1,ksi_2)K(z,z+(rho+a)sinh u)R_max du
-                            # Compute the dot product (or sum) over the vector components.
-                            local_result[
-                                trial_element_index, test_fun_index, trial_fun_index
-                            ] += tmp[
-                                trial_element_index * n_quad_points + quad_point_index
-                            ] * (
-                                -1j
-                                * wavenumber
-                                * test_basis_functions[
-                                    i, test_fun_index, :, test_point_index
-                                ].dot(
-                                    trial_basis_functions[
-                                        trial_element_index,
-                                        trial_fun_index,
-                                        :,
-                                        quad_point_index,
-                                    ]
-                                )
-                            )
-            print("Local Result: ", local_result)  
+        # --- Assemble the Local Matrix Contribution ---
+        # The weak form for each test basis function (with derivative) is:
+        #   Z_mn = ∫ [ (dψ_m/dz)* (d/dz G_n(z)) + k2 ψ_m G_n(z) ] dV
+        # where the integration dV becomes (quad_weight * local_test_factor) for a line element.
+        for q in range(n_quad_points):
+            for a in range(nshape_test):
+                for r in range(n_trial_elements):
+                    for b in range(nshape_trial):
+                        integrand = (test_basis_deriv[a, q] * dLG_int[q, r, b] +
+                                     k2 * test_basis_functions[i, a, 0, q] * LG_int[q, r, b])
+                        local_result[r, a, b] += integrand * (quad_weights[q] * local_test_factor)
 
-        # --- Global Assembly ---
-        for trial_element_index in range(n_trial_elements):
-            trial_element = trial_elements[trial_element_index]
-            for test_fun_index in range(nshape_test):
-                for trial_fun_index in range(nshape_trial):
-                    result[
-                        test_global_dofs[test_element, test_fun_index],
-                        trial_global_dofs[trial_element, trial_fun_index]
-                    ] += (
-                        local_result[trial_element_index, test_fun_index, trial_fun_index]
-                        * test_multipliers[test_element, test_fun_index]
-                        * trial_multipliers[trial_element, trial_fun_index]
-                        * test_edge_lengths[i]
-                        * trial_edge_lengths[trial_element_index]
-                    )
+        # --- Accumulate the Local Results into the Global Matrix ---
+        # Here we assume that the global 'result' array is assembled such that the block
+        # corresponding to test element i and trial element r is stored at result[i, r, :, :]
+        for r in range(n_trial_elements):
+            result[i, r, :, :] = local_result[r, :, :]
 
 
 
