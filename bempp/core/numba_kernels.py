@@ -2701,7 +2701,7 @@ def thinwire_efield_regular_assembler(
 
         for q in range(n_quad_points):
             # Get the current test global coordinate (as a 1D array of length 1)
-            test_global_point = test_global_points[q]
+            test_global_point = test_global_points[:,q]
             # Evaluate the kernel at this test point vs. all trial quadrature points.
             kernel_values = kernel_evaluator(
                 test_global_point,
