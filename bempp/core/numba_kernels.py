@@ -2700,9 +2700,19 @@ def thinwire_efield_regular_assembler(
         LG_int = _np.zeros((n_quad_points, n_trial_elements, nshape_trial), dtype=result_type)
         test_radius = wire_radius[test_element]
 
-        for q in range(n_quad_points):
+        is_adjacent = _np.zeros(n_trial_elements, dtype=_np.bool_)
+
+        #sets adjacency flag
+        for trial_element_index in range(n_trial_elements):
+            trial_element = trial_elements[trial_element_index]
+            if grids_identical and elements_adjacent_line(
+                test_grid_data.elements, test_element, trial_element
+            ):
+                is_adjacent[trial_element_index] = True
+
+        for test_point_index in range(n_quad_points):
             # Get the current test global coordinate (as a 1D array of length 1)
-            test_global_point = test_global_points[:,q]
+            test_global_point = test_global_points[:, test_point_index]
             # Evaluate the kernel at this test point vs. all trial quadrature points.
             kernel_values = kernel_evaluator(
                 test_global_point,
@@ -2714,62 +2724,71 @@ def thinwire_efield_regular_assembler(
             )
             # kernel_values is assumed to be a flat array of length (n_trial_elements * n_quad_points)
             # Now, accumulate the contributions over the trial quadrature points for each trial element and trial basis function.
-            for r in range(n_trial_elements):
-                for b in range(nshape_trial):
+            for trial_element_index in range(n_trial_elements):
+                for trial_fun_index in range(nshape_trial):
                     summation = 0.0 + 0.0j
                     for qp in range(n_quad_points):
-                        idx = r * n_quad_points + qp
-                        summation += kernel_values[idx] * trial_basis_functions[r, b, 0, qp] * factors[idx]
-                    LG_int[q, r, b] = summation
+                        idx = trial_element_index * n_quad_points + qp
+                        summation += kernel_values[idx] * trial_basis_functions[trial_element_index, trial_fun_index, 0, qp] * factors[idx]
+                    LG_int[test_point_index, trial_element_index, trial_fun_index] = summation
 
         # --- Compute the Derivative of the Inner Integral with Respect to z ---
         # Use a central difference scheme (forward/backward differences at boundaries).
         dLG_int = _np.zeros((n_quad_points, n_trial_elements, nshape_trial), dtype=result_type)
-        for r in range(n_trial_elements):
-            for b in range(nshape_trial):
-                for q in range(n_quad_points):
-                    if q == 0:
+        for trial_element_index in range(n_trial_elements):
+            if is_adjacent[trial_element_index]:
+                    continue
+            
+            for trial_fun_index in range(nshape_trial):
+                for quad_point_index in range(n_quad_points):
+                    if quad_point_index == 0:
                         dz = test_global_points[0, 1] - test_global_points[0, 0]
-                        dLG_int[q, r, b] = (LG_int[q+1, r, b] - LG_int[q, r, b]) / dz
-                    elif q == n_quad_points - 1:
+                        dLG_int[quad_point_index, trial_element_index, trial_fun_index] = (LG_int[quad_point_index+1, trial_element_index, trial_fun_index] - LG_int[quad_point_index, trial_element_index, trial_fun_index]) / dz
+                    elif quad_point_index == n_quad_points - 1:
                         dz = test_global_points[0, n_quad_points-1] - test_global_points[0, n_quad_points-2]
-                        dLG_int[q, r, b] = (LG_int[q, r, b] - LG_int[q-1, r, b]) / dz
+                        dLG_int[quad_point_index, trial_element_index, trial_fun_index] = (LG_int[quad_point_index, trial_element_index, trial_fun_index] - LG_int[quad_point_index-1, trial_element_index, trial_fun_index]) / dz
                     else:
-                        dz = test_global_points[0, q+1] - test_global_points[0, q-1]
-                        dLG_int[q, r, b] = (LG_int[q+1, r, b] - LG_int[q-1, r, b]) / dz
+                        dz = test_global_points[0, quad_point_index+1] - test_global_points[0, quad_point_index-1]
+                        dLG_int[quad_point_index, trial_element_index, trial_fun_index] = (LG_int[quad_point_index+1, trial_element_index, trial_fun_index] - LG_int[quad_point_index-1, trial_element_index, trial_fun_index]) / dz
 
         # --- Compute the Derivative of the Test Basis Functions with Respect to z ---
         # Allocate an array: shape (nshape_test, n_quad_points)
         test_basis_deriv = _np.zeros((nshape_test, n_quad_points), dtype=test_basis_functions.dtype)
-        for a in range(nshape_test):
-            for q in range(n_quad_points):
-                if q == 0:
+        for test_fun_index in range(nshape_test):
+            for quad_point_index in range(n_quad_points):
+                if quad_point_index == 0:
                     dz = test_global_points[0, 1] - test_global_points[0, 0]
-                    test_basis_deriv[a, q] = (test_basis_functions[i, a, 0, q+1] - test_basis_functions[i, a, 0, q]) / dz
-                elif q == n_quad_points - 1:
+                    test_basis_deriv[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, 0, quad_point_index+1] - test_basis_functions[i, test_fun_index, 0, quad_point_index]) / dz
+                elif quad_point_index == n_quad_points - 1:
                     dz = test_global_points[0, n_quad_points-1] - test_global_points[0, n_quad_points-2]
-                    test_basis_deriv[a, q] = (test_basis_functions[i, a, 0, q] - test_basis_functions[i, a, 0, q-1]) / dz
+                    test_basis_deriv[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, 0, quad_point_index] - test_basis_functions[i, test_fun_index, 0, quad_point_index-1]) / dz
                 else:
-                    dz = test_global_points[0, q+1] - test_global_points[0, q-1]
-                    test_basis_deriv[a, q] = (test_basis_functions[i, a, 0, q+1] - test_basis_functions[i, a, 0, q-1]) / dz
+                    dz = test_global_points[0, quad_point_index+1] - test_global_points[0, quad_point_index-1]
+                    test_basis_deriv[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, 0, quad_point_index+1] - test_basis_functions[i, test_fun_index, 0, quad_point_index-1]) / dz
 
         # --- Assemble the Local Matrix Contribution ---
         # The weak form for each test basis function (with derivative) is:
         #   Z_mn = ∫ [ (dψ_m/dz)* (d/dz G_n(z)) + k2 ψ_m G_n(z) ] dV
         # where the integration dV becomes (quad_weight * local_test_factor) for a line element.
-        for q in range(n_quad_points):
-            for a in range(nshape_test):
-                for r in range(n_trial_elements):
-                    for b in range(nshape_trial):
-                        integrand = (test_basis_deriv[a, q] * dLG_int[q, r, b] +
-                                     k2 * test_basis_functions[i, a, 0, q] * LG_int[q, r, b])
-                        local_result[r, a, b] += integrand * (quad_weights[q] * local_test_factor)
+        for quad_point_index in range(n_quad_points):
+            for test_fun_index in range(nshape_test):
+                for trial_element_index in range(n_trial_elements):
+                    for trial_fun_index in range(nshape_trial):
+                        integrand = (test_basis_deriv[test_fun_index, quad_point_index] * dLG_int[quad_point_index, trial_element_index, trial_fun_index] +
+                                     k2 * test_basis_functions[i, test_fun_index, 0, quad_point_index] * LG_int[quad_point_index, trial_element_index, trial_fun_index])
+                        local_result[trial_element_index, test_fun_index, trial_fun_index] += integrand * (quad_weights[quad_point_index] * local_test_factor)
 
         # --- Accumulate the Local Results into the Global Matrix ---
         # Here we assume that the global 'result' array is assembled such that the block
-        # corresponding to test element i and trial element r is stored at result[i, r, :, :]
-        for r in range(n_trial_elements):
-            result[i, r, :, :] = local_result[r, :, :]
+        # corresponding to test element i and trial element trial_element_index is stored at result[i, trial_element_index, :, :]
+        result[
+                        test_global_dofs[test_element, test_fun_index],
+                        trial_global_dofs[trial_element, trial_fun_index],
+        ] += (
+                        local_result[
+                            trial_element_index, test_fun_index, trial_fun_index
+                        ]
+        )
 
 
 
