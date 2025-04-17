@@ -160,8 +160,16 @@ def dense_assembler(
     grids_identical = domain.grid == dual_to_range.grid
 
     for test_color_index in range(number_of_test_colors):
-        domain.local2global
-        dual_to_range.local2global
+        print(f"Processing test color index {test_color_index} of {number_of_test_colors}")
+
+        print("Domain grid data:")
+        dom = domain.local2global
+        print(dom)
+
+        print("Dual to range grid data:")
+        dual = dual_to_range.local2global
+        print(dual)
+
 
         numba_assembly_function_regular(
             dual_to_range.grid.data(precision),
