@@ -195,7 +195,7 @@ def get_global_points_line(grid_data, elements, local_points):
     """Get global points."""
     npoints = len(local_points)
     nelements = len(elements)
-    output = _np.empty((2, nelements * npoints), dtype=grid_data.vertices.dtype)
+    output = _np.empty((3, nelements * npoints), dtype=grid_data.vertices.dtype)
     for index, element in enumerate(elements):
         output[:, npoints * index : npoints * (1 + index)] = grid_data.local2global(
             element, local_points

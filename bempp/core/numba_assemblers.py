@@ -170,7 +170,6 @@ def dense_assembler(
         dual = dual_to_range.local2global
         print(dual)
 
-
         numba_assembly_function_regular(
             dual_to_range.grid.data(precision),
             domain.grid.data(precision),
