@@ -1765,8 +1765,6 @@ class GridDataDouble(object):
 
     def local2global(self, elem_index, local_coords):
         """Map local to global coordinates."""
-        print("shape local coords=", local_coords.shape)
-        print("shape jacobians=", self.jacobians[elem_index].shape)
         return _np.expand_dims(
             self.vertices[:, self.elements[0, elem_index]], 1
         ) + self.jacobians[elem_index].dot(local_coords)
@@ -1884,9 +1882,17 @@ class LineGridDataDouble(object):
         """Map local to global coordinates for a line element."""
         print("shape local coords=", local_coords.shape)
         print("shape jacobians=", self.jacobians[elem_index].shape)
-        return _np.expand_dims(
-            self.vertices[:, self.elements[0, elem_index]], 1
-        ) + self.jacobians[elem_index].dot(local_coords)
+        base = self.vertices[:, self.elements[0, elem_index]][:, None]  
+        # Jacobian (3×1)
+        J = self.jacobians[elem_index]  
+
+        # ensure local_coords is a row (1×n_quad)
+        lc = local_coords
+        if lc.ndim == 1:
+            lc = lc[None, :]       # now shape (1, n_quad_points)
+
+        # now J * lc broadcasts (3×1) * (1×n_quad) → (3×n_quad)
+        return base + J * lc
 
 
 @_numba.experimental.jitclass(
