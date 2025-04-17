@@ -1891,8 +1891,10 @@ class LineGridDataDouble(object):
         print("base shape=", base.shape)
 
         output = _np.empty((3, local_coords.shape[0]), dtype="float64")
+        rint("output shape=", output.shape)
         for i in range(local_coords.shape[0]):
             # Compute the physical coordinates
+            print(output)
             output[:, i] = base + self.jacobians[elem_index] * local_coords[i]
         print("output shape=", output.shape)
         return output  
