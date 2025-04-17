@@ -1882,17 +1882,14 @@ class LineGridDataDouble(object):
         """Map local to global coordinates for a line element."""
         print("shape local coords=", local_coords.shape)
         print("shape jacobians=", self.jacobians[elem_index].shape)
-        base = self.vertices[:, self.elements[0, elem_index]][:, None]  
-        # Jacobian (3×1)
-        J = self.jacobians[elem_index]  
-
-        # ensure local_coords is a row (1×n_quad)
-        lc = local_coords
-        if lc.ndim == 1:
-            lc = lc[None, :]       # now shape (1, n_quad_points)
-
-        # now J * lc broadcasts (3×1) * (1×n_quad) → (3×n_quad)
-        return base + J * lc
+        # assume local_coords_1d.shape == (n_quad,)
+        base = self.vertices[:, self.elements[0,elem_index]][:, None]   # (3,1)
+        J    = self.jacobians[elem_index]                              # (3,1)
+        # manually broadcast:
+        out = np.empty((3, local_coords_1d.shape[0]))
+        for q in range(local_coords_1d.shape[0]):
+            out[:,q] = base[:,0] + J[:,0] * local_coords_1d[q]
+        return out
 
 
 @_numba.experimental.jitclass(

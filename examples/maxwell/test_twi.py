@@ -28,7 +28,7 @@ space = bempp.api.function_space(grid, "PWL", 0)
 elec = bempp.api.operators.boundary.maxwell.electric_field(space, space, space, k)
 elec_surface = bempp.api.operators.boundary.maxwell.electric_field(spce_surface_domain, spce_surface_domain, spce_surface_range, k)
 
-mat_surface = elec_surface.weak_form().to_dense()
+# mat_surface = elec_surface.weak_form().to_dense()
 # print("surface matrix =", mat_surface)
 
 
