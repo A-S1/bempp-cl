@@ -1886,9 +1886,9 @@ class LineGridDataDouble(object):
         base = self.vertices[:, self.elements[0,elem_index]][:, None]   # (3,1)
         J    = self.jacobians[elem_index]                              # (3,1)
         # manually broadcast:
-        out = np.empty((3, local_coords_1d.shape[0]))
-        for q in range(local_coords_1d.shape[0]):
-            out[:,q] = base[:,0] + J[:,0] * local_coords_1d[q]
+        out = _np.empty((3, local_coords.shape[0]))
+        for q in range(local_coords.shape[0]):
+            out[:,q] = base[:,0] + J[:,0] * local_coords[q]
         return out
 
 
