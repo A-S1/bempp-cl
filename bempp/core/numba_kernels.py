@@ -2703,12 +2703,12 @@ def thinwire_efield_regular_assembler(
         is_adjacent = _np.zeros(n_trial_elements, dtype=_np.bool_)
 
         #sets adjacency flag
-        for trial_element_index in range(n_trial_elements):
-            trial_element = trial_elements[trial_element_index]
-            if grids_identical and elements_adjacent_line(
-                test_grid_data.elements, test_element, trial_element
-            ):
-                is_adjacent[trial_element_index] = True
+        # for trial_element_index in range(n_trial_elements):
+        #     trial_element = trial_elements[trial_element_index]
+        #     if grids_identical and elements_adjacent_line(
+        #         test_grid_data.elements, test_element, trial_element
+        #     ):
+        #         is_adjacent[trial_element_index] = True
 
         for test_point_index in range(n_quad_points):
             # Get the current test global coordinate (as a 1D array of length 1)
@@ -2770,8 +2770,8 @@ def thinwire_efield_regular_assembler(
         for quad_point_index in range(n_quad_points):
             for test_fun_index in range(nshape_test):
                 for trial_element_index in range(n_trial_elements):
-                    if is_adjacent[trial_element_index]:
-                        continue
+                    # if is_adjacent[trial_element_index]:
+                    #     continue
                     for trial_fun_index in range(nshape_trial):
                         integrand = (test_basis_deriv[test_fun_index, quad_point_index] * dLG_int[quad_point_index, trial_element_index, trial_fun_index] +
                                      k2 * test_basis_functions[i, test_fun_index, 0, quad_point_index] * LG_int[quad_point_index, trial_element_index, trial_fun_index])
