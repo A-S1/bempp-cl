@@ -1887,10 +1887,14 @@ class LineGridDataDouble(object):
         on a line element to physical coords (shape (3, n_quad)).
         """
         # Grab the “base vertex” of this element as a (3×1) column
-        base = self.vertices[:, self.elements[0, elem_index]][:, None]   
+        base = self.vertices[:, self.elements[0, elem_index]][:, None] 
 
-        print("base shape=", base.shape)
-        return base   
+        output = _np.empty((3, local_coords.shape[0]), dtype="float64")
+        for i in range(local_coords.shape[0]):
+            # Compute the physical coordinates
+            output[:, i] = base + self.jacobians[elem_index] * local_coords[i]
+
+        return output  
 
 
 @_numba.experimental.jitclass(
