@@ -160,37 +160,8 @@ def dense_assembler(
     grids_identical = domain.grid == dual_to_range.grid
 
     for test_color_index in range(number_of_test_colors):
-        # print(f"Processing test color index {test_color_index}")
-
-        # print(f"test_indices: {test_indices}")
-        # print(f"Local2global dual: {dual_to_range.local2global} \n Local2global domain: {domain.local2global}")
-
-        # print_argument_info(
-        #     dual_to_range.grid.data(precision),
-        #     domain.grid.data(precision),
-        #     nshape_test,
-        #     nshape_trial,
-        #     test_indices[
-        #         test_color_indexptr[test_color_index] : test_color_indexptr[
-        #             1 + test_color_index
-        #         ]
-        #     ],
-        #     trial_indices,
-        #     dual_to_range.local_multipliers.astype(data_type),
-        #     domain.local_multipliers.astype(data_type),
-        #     dual_to_range.local2global,
-        #     domain.local2global,
-        #     dual_to_range.normal_multipliers,
-        #     domain.normal_multipliers,
-        #     quad_points.astype(data_type),
-        #     quad_weights.astype(data_type),
-        #     numba_kernel_function_regular,
-        #     _np.array(operator_descriptor.options, dtype=data_type),
-        #     grids_identical,
-        #     dual_to_range.shapeset.evaluate,
-        #     domain.shapeset.evaluate,
-        #     result,
-        # )
+        domain.local2global
+        dual_to_range.local2global
 
         numba_assembly_function_regular(
             dual_to_range.grid.data(precision),
@@ -213,7 +184,7 @@ def dense_assembler(
             quad_weights.astype(data_type),
             numba_kernel_function_regular,
             _np.array(operator_descriptor.options, dtype=data_type),
-            grids_identical,
+            grids_identical, 
             dual_to_range.shapeset.evaluate,
             domain.shapeset.evaluate,
             result,
