@@ -1882,10 +1882,27 @@ class LineGridDataDouble(object):
         """Map local to global coordinates for a line element."""
         print("shape local coords=", local_coords.shape)
         print("shape jacobians=", self.jacobians[elem_index].shape)
-        base = self.vertices[:, self.elements[0,elem_index]][:, None]  # (3,1)
-        J    = self.jacobians[elem_index]                             # (3,1)
-        # local_coords is now (1, n_quad)
-        return base + J.dot(local_coords)      
+        """
+        Map reference coords local_coords (shape (n_quad,))
+        on a line element to physical coords (shape (3, n_quad)).
+        """
+        # Grab the “base vertex” of this element as a (3×1) column
+        base = self.vertices[:, self.elements[0, elem_index]][:, None]   # (3,1)
+
+        # Grab the 3×1 Jacobian column for this line segment
+        J = self.jacobians[elem_index]                                  # (3,1)
+
+        # Ensure local_coords is 1‑D length n_quad:
+        n = local_coords.shape[0]
+
+        # Broadcast J * local_coords across columns:
+        #   J: (3,1)
+        #   lc[None,:]: (1,n)
+        # → gives (3,n)
+        lc = local_coords[None, :]                                       # (1,n)
+
+        # Now add the base vertex to each column
+        return base + J * lc     
 
 
 @_numba.experimental.jitclass(
