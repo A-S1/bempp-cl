@@ -32,7 +32,7 @@ mat_surface = elec_surface.weak_form().to_dense()
 print("surface matrix =", mat_surface)
 
 
-mat = elec.weak_form()
+mat = elec.weak_form().to_dense()
 
 
 print("line elements =", line_elements)

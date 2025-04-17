@@ -55,6 +55,63 @@ def singular_assembler(
         result,
     )
 
+def print_argument_info(
+    grid_data_test,
+    grid_data_trial,
+    nshape_test,
+    nshape_trial,
+    test_elements,
+    trial_elements,
+    test_multipliers,
+    trial_multipliers,
+    test_local2global,
+    trial_local2global,
+    test_normal_multipliers,
+    trial_normal_multipliers,
+    quad_points,
+    quad_weights,
+    kernel_function,
+    kernel_parameters,
+    grids_identical,
+    test_shapeset_eval,
+    trial_shapeset_eval,
+    result
+):
+    """
+    Print shapes and basic info for each argument.
+    """
+    args = {
+        'grid_data_test': grid_data_test,
+        'grid_data_trial': grid_data_trial,
+        'nshape_test': nshape_test,
+        'nshape_trial': nshape_trial,
+        'test_elements': test_elements,
+        'trial_elements': trial_elements,
+        'test_multipliers': test_multipliers,
+        'trial_multipliers': trial_multipliers,
+        'test_local2global': test_local2global,
+        'trial_local2global': trial_local2global,
+        'test_normal_multipliers': test_normal_multipliers,
+        'trial_normal_multipliers': trial_normal_multipliers,
+        'quad_points': quad_points,
+        'quad_weights': quad_weights,
+        'kernel_function': kernel_function,
+        'kernel_parameters': kernel_parameters,
+        'grids_identical': grids_identical,
+        'test_shapeset_eval': test_shapeset_eval,
+        'trial_shapeset_eval': trial_shapeset_eval,
+        'result': result,
+    }
+    
+    for name, val in args.items():
+        if hasattr(val, 'shape'):
+            print(f"{name}: array, shape={val.shape}, dtype={val.dtype}")
+        elif isinstance(val, (list, tuple)):
+            print(f"{name}: {type(val).__name__}, length={len(val)}")
+        elif callable(val):
+            print(f"{name}: callable, name={getattr(val, '__name__', repr(val))}")
+        else:
+            print(f"{name}: {type(val).__name__}, value={val}")
 
 def dense_assembler(
     device_interface, operator_descriptor, domain, dual_to_range, parameters, result
@@ -107,6 +164,33 @@ def dense_assembler(
 
         print(f"test_indices: {test_indices}")
         print(f"Local2global dual: {dual_to_range.local2global} \n Local2global domain: {domain.local2global}")
+
+        print_argument_info(
+            dual_to_range.grid.data(precision),
+            domain.grid.data(precision),
+            nshape_test,
+            nshape_trial,
+            test_indices[
+                test_color_indexptr[test_color_index] : test_color_indexptr[
+                    1 + test_color_index
+                ]
+            ],
+            trial_indices,
+            dual_to_range.local_multipliers.astype(data_type),
+            domain.local_multipliers.astype(data_type),
+            dual_to_range.local2global,
+            domain.local2global,
+            dual_to_range.normal_multipliers,
+            domain.normal_multipliers,
+            quad_points.astype(data_type),
+            quad_weights.astype(data_type),
+            numba_kernel_function_regular,
+            _np.array(operator_descriptor.options, dtype=data_type),
+            grids_identical,
+            dual_to_range.shapeset.evaluate,
+            domain.shapeset.evaluate,
+            result,
+        )
 
         numba_assembly_function_regular(
             dual_to_range.grid.data(precision),
