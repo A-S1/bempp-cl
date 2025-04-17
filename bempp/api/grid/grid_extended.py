@@ -1888,6 +1888,7 @@ class LineGridDataDouble(object):
         """
         # Grab the “base vertex” of this element as a (3×1) column
         base = self.vertices[:, self.elements[0, elem_index]][:, None] 
+        print("base shape=", base.shape)
 
         output = _np.empty((3, local_coords.shape[0]), dtype="float64")
         for i in range(local_coords.shape[0]):
