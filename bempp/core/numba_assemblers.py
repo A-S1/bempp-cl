@@ -104,6 +104,10 @@ def dense_assembler(
 
     for test_color_index in range(number_of_test_colors):
         print(f"Processing test color index {test_color_index}")
+
+        print(f"test_indices: {test_indices}")
+        print(f"Local2global dual: {dual_to_range.local2global} \n Local2global domain: {domain.local2global}")
+
         numba_assembly_function_regular(
             dual_to_range.grid.data(precision),
             domain.grid.data(precision),
