@@ -32,7 +32,7 @@ elec = bempp.api.operators.boundary.maxwell.electric_field(space, space, space, 
 # print("surface matrix =", mat_surface)
 
 
-mat = elec.weak_form().to_dense()
+mat = elec.weak_form(option = True).to_dense()
 
 
 print("line elements =", line_elements)
