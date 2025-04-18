@@ -45,6 +45,7 @@ class DenseAssembler(_assembler.AssemblerBase):
             self.parameters,
             operator_descriptor,
             device_interface,
+            option=kwargs.get("option"),
         )
 
         if self.parameters.assembly.always_promote_to_double:
@@ -54,7 +55,7 @@ class DenseAssembler(_assembler.AssemblerBase):
 
 
 def assemble_dense(
-    domain, dual_to_range, parameters, operator_descriptor, device_interface
+    domain, dual_to_range, parameters, operator_descriptor, device_interface, option=None
 ):
     """Assembles the operator and returns a dense matrix."""
     import bempp.api
@@ -88,7 +89,7 @@ def assemble_dense(
 
     grids_identical = domain.grid == dual_to_range.grid
 
-    if grids_identical:
+    if grids_identical and option is None:
 
         trial_local2global = domain.local2global.ravel()
         test_local2global = dual_to_range.local2global.ravel()
