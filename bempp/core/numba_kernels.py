@@ -2693,14 +2693,14 @@ def thinwire_efield_regular_assembler(
         test_global_points = test_grid_data.local2global(test_element, quad_points)
         
         # The integration factor for the test element (its segment length)
-        local_test_factor = test_edge_lengths[test_element]
+        local_test_factor = test_edge_lengths[i]
 
         # --- Compute the Inner Integral: G(z) = ∫ g(z,z') φ(z') dz' for each test quadrature point ---
         # Allocate an array to hold the computed inner integral for each test quadrature point,
         # for all trial elements and for each trial basis function.
         # Shape: (n_quad_points, n_trial_elements, nshape_trial)
         LG_int = _np.zeros((n_quad_points, n_trial_elements, nshape_trial), dtype=result_type)
-        test_radius = wire_radius[test_element]
+        test_radius = wire_radius[i]
 
         is_adjacent = _np.zeros(n_trial_elements, dtype=_np.bool_)
 
