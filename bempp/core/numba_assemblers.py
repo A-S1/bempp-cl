@@ -190,7 +190,7 @@ def dense_assembler(
             domain.shapeset.evaluate,
             result,
         )
-
+    print("Dense assembler completed.")
 
 def potential_assembler(
     device_interface, space, operator_descriptor, points, parameters
