@@ -33,10 +33,10 @@ class BoundaryOperator(object):
         """Return the parameters associated with the operator."""
         return self._parameters
 
-    def weak_form(self, option = None):
+    def weak_form(self):
         """Return the weak form (assemble if necessary)."""
         if not self._cached:
-            self._cached = self._assemble(option)
+            self._cached = self._assemble()
 
         return self._cached
 
@@ -122,11 +122,11 @@ class BoundaryOperatorWithAssembler(BoundaryOperator):
         """Operator descriptor."""
         return self._operator_descriptor
 
-    def _assemble(self, option = None):
+    def _assemble(self):
         """Assemble the operator."""
         if self.transpose_:
-            return self.assembler.assemble(self.descriptor, option).transpose()
-        return self.assembler.assemble(self.descriptor, option)
+            return self.assembler.assemble(self.descriptor).transpose()
+        return self.assembler.assemble(self.descriptor)
 
     def _transpose(self, _range):
         return BoundaryOperatorWithAssembler(
