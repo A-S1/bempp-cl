@@ -117,20 +117,21 @@ def get_piola_transform(grid_data, elements, local_points):
     nopython=True, parallel=False, error_model="numpy", fastmath=True, boundscheck=False
 )
 def get_line_transform(grid_data, elements, local_points):
-    npoints = len(local_points)  # For a line, local_points is 1D (shape: (1, npoints))
+    npoints   = len(local_points)    # number of quadrature points
     nelements = len(elements)
-    # Produce a transformation of shape (nelements, 3, 1, npoints):
-    # For each element, at each quadrature point, we return a 3x1 "matrix" (a vector) that maps
-    # the 1D reference basis function to its 3D physical-space counterpart.
+    # result: (nelements, 3, 1, npoints)
     result = _np.zeros((nelements, 3, 1, npoints), dtype=local_points.dtype)
     
     for element_index in range(nelements):
         element = elements[element_index]
-        # Compute the unit tangent vector for this element.
-        transform = grid_data.jacobians[element] / grid_data.integration_elements[element]
-        # Fill the result for all quadrature points. If the mapping is linear, this is constant.
+        # Pull out the Jacobian column (shape (3,1) → (3,))
+        transform_col = grid_data.jacobians[element][:, 0]
+        # Divide by the scalar integration element → still (3,)
+        transform     = transform_col / grid_data.integration_elements[element]
+        # Fill every quadrature slot with that same 3‑vector
         for qp in range(npoints):
             result[element_index, :, 0, qp] = transform
+
     return result
 
 @_numba.jit(
@@ -2649,6 +2650,7 @@ def thinwire_efield_regular_assembler(
     # --- Setup ---
     wavenumber = kernel_parameters[0] + 1j * kernel_parameters[1]
     k2 = wavenumber * wavenumber	
+    print("wavenumber = ", wavenumber)
 
     result_type = result.dtype
     n_quad_points = len(quad_weights)
