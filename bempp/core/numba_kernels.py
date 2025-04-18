@@ -2789,7 +2789,7 @@ def thinwire_efield_regular_assembler(
                     result[
                                     test_global_dofs[test_element, test_fun_index],
                                     trial_global_dofs[trial_element, trial_fun_index],
-                    ] += (
+                    ] = (
                                     local_result[
                                         trial_element_index, test_fun_index, trial_fun_index
                                     ]
