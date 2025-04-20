@@ -2733,7 +2733,6 @@ def thinwire_efield_regular_assembler(
                     for trial_point_index in range(n_quad_points):
                         idx = trial_element_index * n_quad_points + trial_point_index
                         summation += kernel_values[idx] * trial_basis_functions[trial_element_index, trial_fun_index, 0, trial_point_index] * factors[idx]
-                        print("summation = ", summation)
                     LG_int[test_point_index, trial_element_index, trial_fun_index] = summation
 
         # --- Compute the Derivative of the Inner Integral with Respect to z ---
@@ -2743,13 +2742,13 @@ def thinwire_efield_regular_assembler(
             for trial_fun_index in range(nshape_trial):
                 for quad_point_index in range(n_quad_points):
                     if quad_point_index == 0:
-                        dz = test_global_points[0, 1] - test_global_points[0, 0]
+                        dz =_np.linalg.norm(test_global_points[:, quad_point_index] - test_global_points[:, quad_point_index + 1])
                         dLG_int[quad_point_index, trial_element_index, trial_fun_index] = (LG_int[quad_point_index+1, trial_element_index, trial_fun_index] - LG_int[quad_point_index, trial_element_index, trial_fun_index]) / dz
                     elif quad_point_index == n_quad_points - 1:
-                        dz = test_global_points[0, n_quad_points-1] - test_global_points[0, n_quad_points-2]
+                        dz = _np.linalg.norm(test_global_points[:, quad_point_index-1] - test_global_points[:, quad_point_index])
                         dLG_int[quad_point_index, trial_element_index, trial_fun_index] = (LG_int[quad_point_index, trial_element_index, trial_fun_index] - LG_int[quad_point_index-1, trial_element_index, trial_fun_index]) / dz
                     else:
-                        dz = test_global_points[0, quad_point_index+1] - test_global_points[0, quad_point_index-1]
+                        dz = _np.linalg.norm(test_global_points[:, quad_point_index-1] - test_global_points[:, quad_point_index + 1])
                         dLG_int[quad_point_index, trial_element_index, trial_fun_index] = (LG_int[quad_point_index+1, trial_element_index, trial_fun_index] - LG_int[quad_point_index-1, trial_element_index, trial_fun_index]) / dz
 
         # --- Compute the Derivative of the Test Basis Functions with Respect to z ---
