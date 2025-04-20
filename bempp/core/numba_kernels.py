@@ -2724,7 +2724,8 @@ def thinwire_efield_regular_assembler(
                 kernel_parameters,
                 test_radius,
             )
-            # kernel_values is assumed to be a flat array of length (n_trial_elements * n_quad_points)
+            print("kernel_values = ", kernel_values)
+            # kernel_values is a flat array of length (n_trial_elements * n_quad_points)
             # Now, accumulate the contributions over the trial quadrature points for each trial element and trial basis function.
             for trial_element_index in range(n_trial_elements):
                 for trial_fun_index in range(nshape_trial):
