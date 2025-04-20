@@ -2665,6 +2665,8 @@ def thinwire_efield_regular_assembler(
     # --- Basis Function Transformation on Physical Elements (Line Elements) ---
     test_basis_functions = get_line_transform(test_grid_data, test_elements, quad_points)
     trial_basis_functions = get_line_transform(trial_grid_data, trial_elements, quad_points)
+
+    print("values of the basis functions: ", test_basis_functions)
     # For debugging purposes (only works in non-parallel mode)
     # print("Basis Functions: ", test_basis_functions)
 
