@@ -2752,8 +2752,8 @@ def thinwire_efield_regular_assembler(
                     else:
                         dz = _np.linalg.norm(test_global_points[:, quad_point_index - 1] - test_global_points[:, quad_point_index + 1])
                         dLG_int[quad_point_index, trial_element_index, trial_fun_index] = (LG_int[quad_point_index+1, trial_element_index, trial_fun_index] - LG_int[quad_point_index-1, trial_element_index, trial_fun_index]) / dz
-                    print("dLG_int = ", dLG_int)
-                    print("dz = ", dz)
+                    # print("dLG_int = ", dLG_int)
+                    # print("dz = ", dz)
 
         # --- Compute the Derivative of the Test Basis Functions with Respect to z ---
         # Allocate an array: shape (nshape_test, n_quad_points)
