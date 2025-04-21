@@ -2796,7 +2796,7 @@ def thinwire_efield_regular_assembler(
                     dz =_np.linalg.norm(test_global_points[:, quad_point_index] - test_global_points[:, quad_point_index + 1])
                     test_basis_deriv[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, 0, quad_point_index+1] - test_basis_functions[i, test_fun_index, 0, quad_point_index]) / dz
                 elif quad_point_index == n_quad_points - 1:
-                    dz =_np.linalg.norm(test_global_points[:, quad_point_index] - test_global_points[:, quad_point_index + 1])
+                    dz =_np.linalg.norm(test_global_points[:, quad_point_index-1] - test_global_points[:, quad_point_index])
                     test_basis_deriv[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, 0, quad_point_index] - test_basis_functions[i, test_fun_index, 0, quad_point_index-1]) / dz
                 else:
                     dz = _np.linalg.norm(test_global_points[:, quad_point_index - 1] - test_global_points[:, quad_point_index + 1])
