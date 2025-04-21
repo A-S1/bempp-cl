@@ -120,7 +120,7 @@ def get_line_transform(grid_data, elements, local_points):
     npoints   = local_points.shape[-1]    # e.g. 4
     nelements = len(elements)
     # now 2 basis functions per element
-    result = _np.zeros((nelements, 2, 3, npoints), dtype=np.float64)
+    result = _np.zeros((nelements, 2, 3, npoints), dtype=_np.float64)
 
     for e_i in range(nelements):
         e = elements[e_i]
