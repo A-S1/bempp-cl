@@ -2766,7 +2766,7 @@ def thinwire_efield_regular_assembler(
                     summation = 0.0 + 0.0j
                     for trial_point_index in range(n_quad_points):
                         idx = trial_element_index * n_quad_points + trial_point_index
-                        summation += kernel_values[idx] * trial_basis_functions[trial_element_index, trial_fun_index, 0, trial_point_index] * factors[idx]
+                        summation += kernel_values[idx] * trial_basis_functions[trial_element_index, trial_fun_index, 2, trial_point_index] * factors[idx]
                     LG_int[test_point_index, trial_element_index, trial_fun_index] = summation
 
         # --- Compute the Derivative of the Inner Integral with Respect to z ---
