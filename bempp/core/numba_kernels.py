@@ -2698,7 +2698,7 @@ def thinwire_efield_regular_assembler(
     test_basis_functions = get_line_transform(test_grid_data, test_elements, quad_points, test_multipliers)
     trial_basis_functions = get_line_transform(trial_grid_data, trial_elements, quad_points, trial_multipliers)	
 
-    print("values of the basis functions: ", test_basis_functions)
+    # print("values of the basis functions: ", test_basis_functions)
     # For debugging purposes (only works in non-parallel mode)
     # print("Basis Functions: ", test_basis_functions)
 
@@ -2767,6 +2767,8 @@ def thinwire_efield_regular_assembler(
                     for trial_point_index in range(n_quad_points):
                         idx = trial_element_index * n_quad_points + trial_point_index
                         summation += kernel_values[idx] * trial_basis_functions[trial_element_index, trial_fun_index, 2, trial_point_index] * factors[idx]
+                        print("summation = ", summation)
+                        print("test values =" , trial_basis_functions[trial_element_index, trial_fun_index, 2, trial_point_index])
                     LG_int[test_point_index, trial_element_index, trial_fun_index] = summation
 
         # --- Compute the Derivative of the Inner Integral with Respect to z ---
