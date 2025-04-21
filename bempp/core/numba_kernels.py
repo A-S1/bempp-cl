@@ -117,20 +117,28 @@ def get_piola_transform(grid_data, elements, local_points):
     nopython=True, parallel=False, error_model="numpy", fastmath=True, boundscheck=False
 )
 def get_line_transform(grid_data, elements, local_points):
-    npoints   = len(local_points)    # number of quadrature points
+    npoints   = local_points.shape[-1]    # e.g. 4
     nelements = len(elements)
-    # result: (nelements, 3, 1, npoints)
-    result = _np.zeros((nelements, 3, 1, npoints), dtype=local_points.dtype)
-    
-    for element_index in range(nelements):
-        element = elements[element_index]
-        # Pull out the Jacobian column (shape (3,1) → (3,))
-        transform_col = grid_data.jacobians[element][:, 0]
-        # Divide by the scalar integration element → still (3,)
-        transform     = transform_col / grid_data.integration_elements[element]
-        # Fill every quadrature slot with that same 3‑vector
+    # now 2 basis functions per element
+    result = _np.zeros((nelements, 2, 3, npoints), dtype=np.float64)
+
+    for e_i in range(nelements):
+        e = elements[e_i]
+        v0 = grid_data.vertices[:, grid_data.elements[0, e]]
+        v1 = grid_data.vertices[:, grid_data.elements[1, e]]
+        seg = v1 - v0
+        length = np.linalg.norm(seg)
+        t = seg/length if length>0 else np.zeros(3)
+
+        # compute the two scalar shape fcts at all quad pts:
+        s = local_points[0, :]             # shape (npoints,)
+        phi0 = (1.0 - s) * local_multipliers[e_i, 0]
+        phi1 = s *         local_multipliers[e_i, 1]
+
         for qp in range(npoints):
-            result[element_index, :, 0, qp] = transform
+            # fill the *vector* basis: t * scalar
+            result[e_i, 0,  :, qp] = t * phi0[qp]
+            result[e_i, 1,  :, qp] = t * phi1[qp]
 
     return result
 
