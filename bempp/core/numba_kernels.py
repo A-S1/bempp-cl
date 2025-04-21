@@ -2792,15 +2792,14 @@ def thinwire_efield_regular_assembler(
         test_basis_deriv = _np.zeros((nshape_test, n_quad_points), dtype=test_basis_functions.dtype)
         for test_fun_index in range(nshape_test):
             for quad_point_index in range(n_quad_points):
-                print("test_global_points = ", test_global_points)
                 if quad_point_index == 0:
-                    dz = test_global_points[0, 1] - test_global_points[0, 0]
+                    dz =_np.linalg.norm(test_global_points[:, quad_point_index] - test_global_points[:, quad_point_index + 1])
                     test_basis_deriv[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, 0, quad_point_index+1] - test_basis_functions[i, test_fun_index, 0, quad_point_index]) / dz
                 elif quad_point_index == n_quad_points - 1:
-                    dz = test_global_points[0, n_quad_points-1] - test_global_points[0, n_quad_points-2]
+                    dz =_np.linalg.norm(test_global_points[:, quad_point_index] - test_global_points[:, quad_point_index + 1])
                     test_basis_deriv[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, 0, quad_point_index] - test_basis_functions[i, test_fun_index, 0, quad_point_index-1]) / dz
                 else:
-                    dz = test_global_points[0, quad_point_index+1] - test_global_points[0, quad_point_index-1]
+                    dz = _np.linalg.norm(test_global_points[:, quad_point_index - 1] - test_global_points[:, quad_point_index + 1])
                     test_basis_deriv[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, 0, quad_point_index+1] - test_basis_functions[i, test_fun_index, 0, quad_point_index-1]) / dz
 
         # --- Assemble the Local Matrix Contribution ---
