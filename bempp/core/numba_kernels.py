@@ -127,7 +127,7 @@ def get_line_transform(grid_data, elements, local_points):
         v0 = grid_data.vertices[:, grid_data.elements[0, e]]
         v1 = grid_data.vertices[:, grid_data.elements[1, e]]
         seg = v1 - v0
-        length = np.linalg.norm(seg)
+        length = _np.linalg.norm(seg)
         t = seg/length if length>0 else np.zeros(3)
 
         # compute the two scalar shape fcts at all quad pts:
