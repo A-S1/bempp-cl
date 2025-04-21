@@ -1879,23 +1879,19 @@ class LineGridDataDouble(object):
         self.element_neighbor_indexptr = element_neighbor_indexptr
 
     def local2global(self, elem_index, local_coords):
-        """Map local to global coordinates for a line element."""
-        print("shape local coords=", local_coords.shape)
-        print("shape jacobians=", self.jacobians[elem_index].shape)
+
         """
         Map reference coords local_coords (shape (n_quad,))
         on a line element to physical coords (shape (3, n_quad)).
         """
-        # Grab the “base vertex” of this element as a (3×1) column
+        # Grab the “base vertex” of this element as a (3×1) array
         base = self.vertices[:, self.elements[0, elem_index]][:, None] 
-        print("base shape=", base.shape)
-
         output = _np.empty((3, local_coords.shape[0]), dtype="float64")
-        print("output shape=", output.shape)
+
         for i in range(local_coords.shape[0]):
             temp = base + self.jacobians[elem_index] * local_coords[i]   # shape (3,1)
             output[:, i] = temp.ravel() 
-        print("output shape=", output.shape)
+
         return output  
 
 

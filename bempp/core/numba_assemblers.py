@@ -162,8 +162,6 @@ def dense_assembler(
     for test_color_index in range(number_of_test_colors):
         print(f"Processing test color index {test_color_index} of {number_of_test_colors}")
 
-
-
         numba_assembly_function_regular(
             dual_to_range.grid.data(precision),
             domain.grid.data(precision),
