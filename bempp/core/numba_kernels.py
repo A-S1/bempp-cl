@@ -2767,8 +2767,6 @@ def thinwire_efield_regular_assembler(
                     for trial_point_index in range(n_quad_points):
                         idx = trial_element_index * n_quad_points + trial_point_index
                         summation += kernel_values[idx] * trial_basis_functions[trial_element_index, trial_fun_index, 2, trial_point_index] * factors[idx]
-                        print("summation = ", summation)
-                        print("test values =" , trial_basis_functions[trial_element_index, trial_fun_index, 2, trial_point_index])
                     LG_int[test_point_index, trial_element_index, trial_fun_index] = summation
 
         # --- Compute the Derivative of the Inner Integral with Respect to z ---
@@ -2815,7 +2813,7 @@ def thinwire_efield_regular_assembler(
                         continue
                     for trial_fun_index in range(nshape_trial):
                         integrand = (test_basis_deriv[test_fun_index, quad_point_index] * dLG_int[quad_point_index, trial_element_index, trial_fun_index] +
-                                     k2 * test_basis_functions[i, test_fun_index, 0, quad_point_index] * LG_int[quad_point_index, trial_element_index, trial_fun_index])
+                                     k2 * test_basis_functions[i, test_fun_index, 2, quad_point_index] * LG_int[quad_point_index, trial_element_index, trial_fun_index])
                         local_result[trial_element_index, test_fun_index, trial_fun_index] += integrand * (quad_weights[quad_point_index] * local_test_factor)
 
         # --- Accumulate the Local Results into the Global Matrix ---
