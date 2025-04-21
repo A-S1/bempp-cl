@@ -2792,6 +2792,7 @@ def thinwire_efield_regular_assembler(
         test_basis_deriv = _np.zeros((nshape_test, n_quad_points), dtype=test_basis_functions.dtype)
         for test_fun_index in range(nshape_test):
             for quad_point_index in range(n_quad_points):
+                print("test_global_points = ", test_global_points)
                 if quad_point_index == 0:
                     dz = test_global_points[0, 1] - test_global_points[0, 0]
                     test_basis_deriv[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, 0, quad_point_index+1] - test_basis_functions[i, test_fun_index, 0, quad_point_index]) / dz
