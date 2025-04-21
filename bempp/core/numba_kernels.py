@@ -116,31 +116,55 @@ def get_piola_transform(grid_data, elements, local_points):
 @_numba.jit(
     nopython=True, parallel=False, error_model="numpy", fastmath=True, boundscheck=False
 )
-def get_line_transform(grid_data, elements, local_points):
-    npoints   = local_points.shape[-1]    # e.g. 4
+def get_line_transform(grid_data, elements, local_points, local_multipliers):
+    """
+    For each element, builds the two PWL vector basis functions on the line:
+      φ0(s) = (1−s)*tangent,  φ1(s) = s*tangent
+    Returns array of shape (nelements, 2, 3, npoints).
+    Accepts local_points either as shape (npoints,) or (1, npoints).
+    """
+    # Normalize local_points to 1D s[0..npoints-1]
+    npoints = local_points.shape[-1]
+    # If someone passed in a 2D (1,n) array, grab that row; else it's already (n,)
+    if local_points.ndim == 2:
+        s = local_points[0]
+    else:
+        s = local_points
+
     nelements = len(elements)
-    # now 2 basis functions per element
+    # result[e, basisIndex, coord, qp]
     result = _np.zeros((nelements, 2, 3, npoints), dtype=_np.float64)
 
     for e_i in range(nelements):
         e = elements[e_i]
+        # end‐points
         v0 = grid_data.vertices[:, grid_data.elements[0, e]]
         v1 = grid_data.vertices[:, grid_data.elements[1, e]]
         seg = v1 - v0
         length = _np.linalg.norm(seg)
-        t = seg/length if length>0 else np.zeros(3)
+        if length > 0.0:
+            tangent = seg / length
+        else:
+            tangent = _np.zeros(3, dtype=_np.float64)
 
-        # compute the two scalar shape fcts at all quad pts:
-        s = local_points[0, :]             # shape (npoints,)
-        phi0 = (1.0 - s) * local_multipliers[e_i, 0]
-        phi1 = s *         local_multipliers[e_i, 1]
+        # apply local multipliers (usually 1) to the scalars
+        m0 = local_multipliers[e_i, 0]
+        m1 = local_multipliers[e_i, 1]
 
         for qp in range(npoints):
-            # fill the *vector* basis: t * scalar
-            result[e_i, 0,  :, qp] = t * phi0[qp]
-            result[e_i, 1,  :, qp] = t * phi1[qp]
+            phi0 = (1.0 - s[qp]) * m0
+            phi1 = s[qp]         * m1
+            # fill the vector basis functions
+            result[e_i, 0, 0, qp] = tangent[0] * phi0
+            result[e_i, 0, 1, qp] = tangent[1] * phi0
+            result[e_i, 0, 2, qp] = tangent[2] * phi0
+
+            result[e_i, 1, 0, qp] = tangent[0] * phi1
+            result[e_i, 1, 1, qp] = tangent[1] * phi1
+            result[e_i, 1, 2, qp] = tangent[2] * phi1
 
     return result
+
 
 @_numba.jit(
     nopython=True, parallel=False, error_model="numpy", fastmath=True, boundscheck=False
@@ -2671,8 +2695,8 @@ def thinwire_efield_regular_assembler(
     trial_global_points = get_global_points_line(trial_grid_data, trial_elements, quad_points)
 
     # --- Basis Function Transformation on Physical Elements (Line Elements) ---
-    test_basis_functions = get_line_transform(test_grid_data, test_elements, quad_points)
-    trial_basis_functions = get_line_transform(trial_grid_data, trial_elements, quad_points)
+    test_basis_functions = get_line_transform(test_grid_data, test_elements, quad_points, test_multipliers)
+    trial_basis_functions = get_line_transform(trial_grid_data, trial_elements, quad_points, trial_multipliers)	
 
     print("values of the basis functions: ", test_basis_functions)
     # For debugging purposes (only works in non-parallel mode)
