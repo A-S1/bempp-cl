@@ -2727,7 +2727,7 @@ def thinwire_efield_regular_assembler(
         # Allocate an array to hold the computed inner integral for each test quadrature point,
         # for all trial elements and for each trial basis function.
         # Shape: (n_quad_points, n_trial_elements, nshape_trial)
-        LG_int = _np.zeros((n_quad_points, n_trial_elements, nshape_trial), dtype=result_type)
+        LG_int = _np.zeros((n_quad_points, n_trial_elements, nshape_trial, 3), dtype=result_type)
         test_radius = wire_radius[i]
 
         is_adjacent = _np.zeros(n_trial_elements, dtype=_np.bool_)
@@ -2762,11 +2762,11 @@ def thinwire_efield_regular_assembler(
                         idx = trial_element_index * n_quad_points + trial_point_index
                         for j in range(3):
                             summation[j] += kernel_values[idx] * trial_basis_functions[trial_element_index, trial_fun_index, j, trial_point_index] * factors[idx]
-                    LG_int[test_point_index, trial_element_index, trial_fun_index] = summation
+                    LG_int[test_point_index, trial_element_index, trial_fun_index, :] = summation
 
         # --- Compute the Derivative of the Inner Integral with Respect to z ---
         # Use a central difference scheme (forward/backward differences at boundaries).
-        dLG_int = _np.zeros((n_quad_points, n_trial_elements, nshape_trial), dtype=result_type)
+        dLG_int = _np.zeros((n_quad_points, n_trial_elements, nshape_trial, 3), dtype=result_type)
         for trial_element_index in range(n_trial_elements):            
             for trial_fun_index in range(nshape_trial):
                 for quad_point_index in range(n_quad_points):
@@ -2783,7 +2783,7 @@ def thinwire_efield_regular_assembler(
 
         # --- Compute the Derivative of the Test Basis Functions with Respect to z ---
         # Allocate an array: shape (nshape_test, n_quad_points)
-        test_basis_deriv = _np.zeros((nshape_test, n_quad_points), dtype=test_basis_functions.dtype)
+        test_basis_deriv = _np.zeros((nshape_test, n_quad_points, 3), dtype=test_basis_functions.dtype)
         for test_fun_index in range(nshape_test):
             for quad_point_index in range(n_quad_points):
                 if quad_point_index == 0:
