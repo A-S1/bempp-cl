@@ -2682,7 +2682,6 @@ def thinwire_efield_regular_assembler(
     # --- Setup ---
     wavenumber = kernel_parameters[0] + 1j * kernel_parameters[1]
     k2 = wavenumber * wavenumber	
-    print("wavenumber = ", wavenumber)
 
     result_type = result.dtype
     n_quad_points = len(quad_weights)
@@ -2697,10 +2696,6 @@ def thinwire_efield_regular_assembler(
     # --- Basis Function Transformation on Physical Elements (Line Elements) ---
     test_basis_functions = get_line_transform(test_grid_data, test_elements, quad_points, test_multipliers)
     trial_basis_functions = get_line_transform(trial_grid_data, trial_elements, quad_points, trial_multipliers)	
-
-    # print("values of the basis functions: ", test_basis_functions)
-    # For debugging purposes (only works in non-parallel mode)
-    # print("Basis Functions: ", test_basis_functions)
 
     # --- Compute Edge Lengths for Each Segment ---
     test_edge_lengths = get_edge_lengths_line(test_grid_data, test_elements)
@@ -2718,18 +2713,17 @@ def thinwire_efield_regular_assembler(
 
     # --- Main Assembly Loop over Test Elements (Parallelized) ---
     for i in _numba.prange(n_test_elements):
-        test_element = test_elements[i]
-        # local_result will be assembled into the global 'result'
+        test_element = test_elements[i]'
         local_result = _np.zeros((n_trial_elements, nshape_test, nshape_trial), dtype=result_type)
         
         # Map the quadrature points on the test element to global coordinates.
-        # Assumed shape is (1, n_quad_points) for 1D (wire axis) data.
+        # shape is (1, n_quad_points) for 1D (wire axis) data.
         test_global_points = test_grid_data.local2global(test_element, quad_points)
         
         # The integration factor for the test element (its segment length)
         local_test_factor = test_edge_lengths[i]
 
-        # --- Compute the Inner Integral: G(z) = ∫ g(z,z') φ(z') dz' for each test quadrature point ---
+        # --- Compute the Inner Integral: G(z) = int_L g(z,z') phi(z') dz' for each test quadrature point ---
         # Allocate an array to hold the computed inner integral for each test quadrature point,
         # for all trial elements and for each trial basis function.
         # Shape: (n_quad_points, n_trial_elements, nshape_trial)
@@ -2760,13 +2754,13 @@ def thinwire_efield_regular_assembler(
             )
             
             # kernel_values is a flat array of length (n_trial_elements * n_quad_points)
-            # Now, accumulate the contributions over the trial quadrature points for each trial element and trial basis function.
+            # accumulate the contributions over the trial quadrature points for each trial element and trial basis function.
             for trial_element_index in range(n_trial_elements):
                 for trial_fun_index in range(nshape_trial):
                     summation = 0.0 + 0.0j
                     for trial_point_index in range(n_quad_points):
                         idx = trial_element_index * n_quad_points + trial_point_index
-                        summation += kernel_values[idx] * trial_basis_functions[trial_element_index, trial_fun_index, 2, trial_point_index] * factors[idx]
+                        summation += kernel_values[idx] * trial_basis_functions[trial_element_index, trial_fun_index, :, trial_point_index] * factors[idx]
                     LG_int[test_point_index, trial_element_index, trial_fun_index] = summation
 
         # --- Compute the Derivative of the Inner Integral with Respect to z ---
@@ -2784,8 +2778,7 @@ def thinwire_efield_regular_assembler(
                     else:
                         dz = _np.linalg.norm(test_global_points[:, quad_point_index - 1] - test_global_points[:, quad_point_index + 1])
                         dLG_int[quad_point_index, trial_element_index, trial_fun_index] = (LG_int[quad_point_index+1, trial_element_index, trial_fun_index] - LG_int[quad_point_index-1, trial_element_index, trial_fun_index]) / dz
-                    # print("dLG_int = ", dLG_int)
-                    # print("dz = ", dz)
+                
 
         # --- Compute the Derivative of the Test Basis Functions with Respect to z ---
         # Allocate an array: shape (nshape_test, n_quad_points)
@@ -2794,17 +2787,17 @@ def thinwire_efield_regular_assembler(
             for quad_point_index in range(n_quad_points):
                 if quad_point_index == 0:
                     dz =_np.linalg.norm(test_global_points[:, quad_point_index] - test_global_points[:, quad_point_index + 1])
-                    test_basis_deriv[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, 0, quad_point_index+1] - test_basis_functions[i, test_fun_index, 0, quad_point_index]) / dz
+                    test_basis_deriv[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, :, quad_point_index+1] - test_basis_functions[i, test_fun_index, :, quad_point_index]) / dz
                 elif quad_point_index == n_quad_points - 1:
-                    dz =_np.linalg.norm(test_global_points[:, quad_point_index-1] - test_global_points[:, quad_point_index])
-                    test_basis_deriv[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, 0, quad_point_index] - test_basis_functions[i, test_fun_index, 0, quad_point_index-1]) / dz
+                    dz =_np.linalg.norm(test_global_points[:, quad_point_index-1 ] - test_global_points[:, quad_point_index])
+                    test_basis_deriv[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, :, quad_point_index] - test_basis_functions[i, test_fun_index, :, quad_point_index-1]) / dz
                 else:
                     dz = _np.linalg.norm(test_global_points[:, quad_point_index - 1] - test_global_points[:, quad_point_index + 1])
-                    test_basis_deriv[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, 0, quad_point_index+1] - test_basis_functions[i, test_fun_index, 0, quad_point_index-1]) / dz
+                    test_basis_deriv[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, :, quad_point_index+1] - test_basis_functions[i, test_fun_index, :, quad_point_index-1]) / dz
 
         # --- Assemble the Local Matrix Contribution ---
         # The weak form for each test basis function (with derivative) is:
-        #   Z_mn = ∫ [ (dψ_m/dz)* (d/dz G_n(z)) + k2 ψ_m G_n(z) ] dV
+        #   Z_mn = int [ (dphi_m/dz)* (d/dz G_n(z)) + k2 phi_m G_n(z) ] dV
         # where the integration dV becomes (quad_weight * local_test_factor) for a line element.
         for quad_point_index in range(n_quad_points):
             for test_fun_index in range(nshape_test):
@@ -2813,12 +2806,12 @@ def thinwire_efield_regular_assembler(
                         continue
                     for trial_fun_index in range(nshape_trial):
                         integrand = (test_basis_deriv[test_fun_index, quad_point_index] * dLG_int[quad_point_index, trial_element_index, trial_fun_index] +
-                                     k2 * test_basis_functions[i, test_fun_index, 2, quad_point_index] * LG_int[quad_point_index, trial_element_index, trial_fun_index])
+                                     k2 * (test_basis_functions[i, test_fun_index, :, quad_point_index] @ LG_int[quad_point_index, trial_element_index, trial_fun_index]))
                         local_result[trial_element_index, test_fun_index, trial_fun_index] += integrand * (quad_weights[quad_point_index] * local_test_factor)
 
         # --- Accumulate the Local Results into the Global Matrix ---
-        # Here we assume that the global 'result' array is assembled such that the block
-        # corresponding to test element i and trial element trial_element_index is stored at result[i, trial_element_index, :, :]
+        # The global result array is assembled such that the block
+        # corresponding to test element i and trial element trial_element_index is stored at result with the relevant dof
         for trial_element_index in range(n_trial_elements):
             trial_element = trial_elements[trial_element_index]
             for test_fun_index in range(nshape_test):
