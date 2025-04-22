@@ -2713,7 +2713,7 @@ def thinwire_efield_regular_assembler(
 
     # --- Main Assembly Loop over Test Elements (Parallelized) ---
     for i in _numba.prange(n_test_elements):
-        test_element = test_elements[i]'
+        test_element = test_elements[i]
         local_result = _np.zeros((n_trial_elements, nshape_test, nshape_trial), dtype=result_type)
         
         # Map the quadrature points on the test element to global coordinates.
