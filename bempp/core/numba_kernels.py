@@ -2757,7 +2757,7 @@ def thinwire_efield_regular_assembler(
             # accumulate the contributions over the trial quadrature points for each trial element and trial basis function.
             for trial_element_index in range(n_trial_elements):
                 for trial_fun_index in range(nshape_trial):
-                    summation = _np.zeros(3)
+                    summation = _np.zeros(3, dtype=result_type)
                     for trial_point_index in range(n_quad_points):
                         idx = trial_element_index * n_quad_points + trial_point_index
                         for j in range(3):
