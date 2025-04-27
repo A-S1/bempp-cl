@@ -461,7 +461,7 @@ def helmholtz_single_layer_regular(
             for j in range(npoints):
                 dist[j] += (trial_points[i, j] - test_point[i]) ** 2
     else:
-        for i in range(2):
+        for i in range(3):
             for j in range(npoints):
                 dist[j] += (trial_points[i, j] - test_point[i]) ** 2
                 dist[j] += wire_radius ** 2
@@ -476,6 +476,24 @@ def helmholtz_single_layer_regular(
             output_imag[j] *= _np.exp(-wavenumber_imag * dist[j])
     return output_real + 1j * output_imag
 
+@_numba.jit(
+    nopython=True, parallel=False, error_model="numpy", fastmath=True, boundscheck=False
+)
+def thinwire_analytical(
+    test_point, trial_points, test_normal, trial_normals, kernel_parameters, wire_radius = None
+):
+    """Evaluate Helmholtz single layer for regular kernels."""
+    wavenumber_real = kernel_parameters[0]
+    wavenumber_imag = kernel_parameters[1]
+    npoints = trial_points.shape[1]
+    dtype = trial_points.dtype
+    dist = _np.zeros(npoints, dtype=dtype)
+    output_real = _np.zeros(npoints, dtype=dtype)
+    output_imag = _np.zeros(npoints, dtype=dtype)
+    m_inv_4pi = dtype.type(M_INV_4PI)
+
+    
+    
 
 @_numba.jit(
     nopython=True, parallel=False, error_model="numpy", fastmath=True, boundscheck=False
@@ -2826,6 +2844,85 @@ def thinwire_efield_regular_assembler(
                                     ]
                     )
 
+
+
+@_numba.jit(
+    nopython=True, parallel=True, error_model="numpy", fastmath=True, boundscheck=False
+)
+def thinwire_efield_singular(
+    grid_data,
+    test_points,
+    trial_points,
+    quad_weights,
+    test_elements,
+    trial_elements,
+    test_offsets,
+    trial_offsets,
+    weights_offsets,
+    number_of_quad_points,
+    test_normal_multipliers,
+    trial_normal_multipliers,
+    nshape_test,
+    nshape_trial,
+    test_shapeset,
+    trial_shapeset,
+    kernel_evaluator,
+    kernel_parameters,
+    result,
+):
+    """Singular evaluator."""
+    
+
+    nelements = len(test_elements)
+
+    test_edge_lengths = get_edge_lengths_line(grid_data, test_elements)
+    trial_edge_lengths = get_edge_lengths_line(grid_data, trial_elements)
+
+    for index in _numba.prange(nelements):
+        wavenumber = kernel_parameters[0] + 1j * kernel_parameters[1]
+        test_element = test_elements[index]
+        trial_element = trial_elements[index]
+        test_offset = test_offsets[index]
+        trial_offset = trial_offsets[index]
+        weights_offset = weights_offsets[index]
+        npoints = number_of_quad_points[index]
+        test_local_points = test_points[:, test_offset : test_offset + npoints]
+        trial_local_points = trial_points[:, trial_offset : trial_offset + npoints]
+        test_global_points = grid_data.local2global(test_element, test_local_points)
+        trial_global_points = grid_data.local2global(trial_element, trial_local_points)
+        test_fun_values = test_shapeset(
+            test_points[:, test_offset : test_offset + npoints]
+        )
+        trial_fun_values = trial_shapeset(
+            trial_points[:, trial_offset : trial_offset + npoints]
+        )
+
+        test_fun_values = get_line_transform(
+            grid_data,
+            [test_element],
+            test_points[:, test_offset : test_offset + npoints],
+        )[0]
+        trial_fun_values = get_line_transform(
+            grid_data,
+            [trial_element],
+            trial_points[:, trial_offset : trial_offset + npoints],
+        )[0]
+
+        kernel_values = kernel_evaluator(
+            test_global_points,
+            trial_global_points,
+            None,
+            None,
+            kernel_parameters,
+        )
+
+        S_1 = _np.zeros(npoints, dtype=result.dtype)
+        S_2 = _np.zeros(npoints, dtype=result.dtype)
+
+        for test_fun_index in range(nshape_test):
+            for trial_fun_index in range(nshape_trial):
+                for point_index in range(npoints):
+                   continue 
 
 
 @_numba.jit(
