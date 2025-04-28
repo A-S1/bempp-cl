@@ -479,18 +479,30 @@ def helmholtz_single_layer_regular(
 @_numba.jit(
     nopython=True, parallel=False, error_model="numpy", fastmath=True, boundscheck=False
 )
-def thinwire_analytical(
+def thinwire_analytical_singular(
     test_point, trial_points, test_normal, trial_normals, kernel_parameters, wire_radius = None
 ):
     """Evaluate Helmholtz single layer for regular kernels."""
     wavenumber_real = kernel_parameters[0]
     wavenumber_imag = kernel_parameters[1]
+    wavenumber = wavenumber_real + 1j * wavenumber_imag
     npoints = trial_points.shape[1]
     dtype = trial_points.dtype
-    dist = _np.zeros(npoints, dtype=dtype)
-    output_real = _np.zeros(npoints, dtype=dtype)
-    output_imag = _np.zeros(npoints, dtype=dtype)
-    m_inv_4pi = dtype.type(M_INV_4PI)
+
+    output_S1 = _np.zeros(3, dtype=dtype)
+    output_S2 = _np.zeros(3, dtype=dtype)
+
+    for i in range(3):
+        output_S1[i] = 1 / test_normal * ( _np.sqrt(wire_radius**2 +
+                        (test_point[i] - test_normal)**2) - _np.sqrt(wire_radius**2 + test_point[i]**2) ) + test_point[i] / test_normal * _np.log( (test_point[i] + _np.sqrt( wire_radius**2 + test_point[i] **2 )) / (test_point[i] - test_normal + _np.sqrt( wire_radius**2 + (test_point[i] - test_normal)**2 )) )
+        
+        output_S1[i] = output_S1[i] - 1j * wavenumber * test_normal
+        
+        output_S2[i] = 1 / test_normal**2 * _np.log( (test_point[i] + _np.sqrt( wire_radius**2 + test_point[i] **2 )) / (test_point[i] - test_normal + _np.sqrt( wire_radius**2 + (test_point[i] - test_normal)**2 )) - 1j * wavenumber * test_normal) 
+
+    return output_S1, output_S2
+
+
 
     
     
@@ -2827,6 +2839,8 @@ def thinwire_efield_regular_assembler(
                         integrand = ((test_basis_deriv[test_fun_index, quad_point_index] @ dLG_int[quad_point_index, trial_element_index, trial_fun_index]) +
                                      k2 * (test_basis_functions[i, test_fun_index, :, quad_point_index] @ LG_int[quad_point_index, trial_element_index, trial_fun_index]))
                         local_result[trial_element_index, test_fun_index, trial_fun_index] += integrand * (quad_weights[quad_point_index] * local_test_factor)
+                        print(f"test_fun_index: {test_fun_index}, trial_fun_index: {trial_fun_index}, quad_point_index: {quad_point_index}, integrand: {integrand}, local_result: {local_result[trial_element_index, test_fun_index, trial_fun_index]}")
+                    
 
         # --- Accumulate the Local Results into the Global Matrix ---
         # The global result array is assembled such that the block
@@ -2908,16 +2922,14 @@ def thinwire_efield_singular(
             trial_points[:, trial_offset : trial_offset + npoints],
         )[0]
 
-        kernel_values = kernel_evaluator(
-            test_global_points,
-            trial_global_points,
-            None,
-            None,
-            kernel_parameters,
-        )
-
-        S_1 = _np.zeros(npoints, dtype=result.dtype)
-        S_2 = _np.zeros(npoints, dtype=result.dtype)
+        for test_global_point in test_global_points:
+            S_1, S_2 = kernel_evaluator(
+                test_global_point,
+                trial_global_points,
+                test_edge_lengths,
+                None,
+                kernel_parameters,
+            )
 
         for test_fun_index in range(nshape_test):
             for trial_fun_index in range(nshape_trial):
