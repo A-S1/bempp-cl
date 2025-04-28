@@ -480,27 +480,31 @@ def helmholtz_single_layer_regular(
     nopython=True, parallel=False, error_model="numpy", fastmath=True, boundscheck=False
 )
 def thinwire_analytical_singular(
-    test_point, trial_points, test_normal, trial_normals, kernel_parameters, wire_radius = None
+    test_points, trial_points, test_normal, trial_normals, kernel_parameters, wire_radius = None
 ):
     """Evaluate Helmholtz single layer for regular kernels."""
     wavenumber_real = kernel_parameters[0]
     wavenumber_imag = kernel_parameters[1]
     wavenumber = wavenumber_real + 1j * wavenumber_imag
-    npoints = trial_points.shape[1]
+    npoints = test_points.shape[1]
     dtype = trial_points.dtype
 
-    output_S1 = _np.zeros(3, dtype=dtype)
-    output_S2 = _np.zeros(3, dtype=dtype)
-
-    for i in range(3):
-        output_S1[i] = 1 / test_normal * ( _np.sqrt(wire_radius**2 +
-                        (test_point[i] - test_normal)**2) - _np.sqrt(wire_radius**2 + test_point[i]**2) ) + test_point[i] / test_normal * _np.log( (test_point[i] + _np.sqrt( wire_radius**2 + test_point[i] **2 )) / (test_point[i] - test_normal + _np.sqrt( wire_radius**2 + (test_point[i] - test_normal)**2 )) )
+    S1 = _np.zeros((npoints, 3), dtype=dtype)
+    S2 = _np.zeros((npoints, 3), dtype=dtype)
+    for j in range(npoints):
+        output_S1 = _np.zeros(3, dtype=dtype)
+        output_S2 = _np.zeros(3, dtype=dtype)
+        for i in range(3):        
+            output_S1[i] = 1 / test_normal * ( _np.sqrt(wire_radius**2 +
+                            (test_point[i] - test_normal)**2) - _np.sqrt(wire_radius**2 + test_point[i]**2) ) + test_point[i] / test_normal * _np.log( (test_point[i] + _np.sqrt( wire_radius**2 + test_point[i] **2 )) / (test_point[i] - test_normal + _np.sqrt( wire_radius**2 + (test_point[i] - test_normal)**2 )) )
+            
+            output_S1[i] = output_S1[i] - 1j * wavenumber * test_normal
+            
+            output_S2[i] = 1 / test_normal**2 * _np.log( (test_point[i] + _np.sqrt( wire_radius**2 + test_point[i] **2 )) / (test_point[i] - test_normal + _np.sqrt( wire_radius**2 + (test_point[i] - test_normal)**2 )) - 1j * wavenumber * test_normal) 
         
-        output_S1[i] = output_S1[i] - 1j * wavenumber * test_normal
-        
-        output_S2[i] = 1 / test_normal**2 * _np.log( (test_point[i] + _np.sqrt( wire_radius**2 + test_point[i] **2 )) / (test_point[i] - test_normal + _np.sqrt( wire_radius**2 + (test_point[i] - test_normal)**2 )) - 1j * wavenumber * test_normal) 
-
-    return output_S1, output_S2
+        S1[j] = output_S1
+        S2[j] = output_S2
+    return S1, S2
 
 
 
@@ -2840,7 +2844,8 @@ def thinwire_efield_regular_assembler(
                         integrand = ((test_basis_deriv[test_fun_index, quad_point_index] @ dLG_int[quad_point_index, trial_element_index, trial_fun_index]) +
                                      k2 * (test_basis_functions[i, test_fun_index, :, quad_point_index] @ LG_int[quad_point_index, trial_element_index, trial_fun_index]))
                         local_result[trial_element_index, test_fun_index, trial_fun_index] += integrand * (quad_weights[quad_point_index] * local_test_factor)
-                    print(f"test_element: {i}, trial_element: {trial_element_index}, test_fun_index: {test_fun_index}, trial_fun_index: {trial_fun_index}, integrand: {integrand}, local_result: {local_result[trial_element_index, test_fun_index, :]}")
+                    
+                    #print(f"test_element: {i}, trial_element: {trial_element_index}, test_fun_index: {test_fun_index}, trial_fun_index: {trial_fun_index}, integrand: {integrand}, local_result: {local_result[trial_element_index, test_fun_index, :]}")
                     
 
         # --- Accumulate the Local Results into the Global Matrix ---
@@ -2892,9 +2897,11 @@ def thinwire_efield_singular(
 
     test_edge_lengths = get_edge_lengths_line(grid_data, test_elements)
     trial_edge_lengths = get_edge_lengths_line(grid_data, trial_elements)
+    inv4pi = 1.0 / (4.0 * np.pi)
 
     for index in _numba.prange(nelements):
         wavenumber = kernel_parameters[0] + 1j * kernel_parameters[1]
+        inv_k2 = 1.0 / (wavenumber * wavenumber)
         test_element = test_elements[index]
         trial_element = trial_elements[index]
         test_offset = test_offsets[index]
@@ -2923,19 +2930,65 @@ def thinwire_efield_singular(
             trial_points[:, trial_offset : trial_offset + npoints],
         )[0]
 
-        for test_global_point in test_global_points:
-            S_1, S_2 = kernel_evaluator(
-                test_global_point,
-                trial_global_points,
-                test_edge_lengths,
-                None,
-                kernel_parameters,
-            )
+        # here compute the subsegments of the test element between two quadrature points
+        # then compute the value of the hatfunction at that point 
 
+
+        breaks = _np.empty(npoints + 2)
+        breaks[0] = 0.0
+        for i in range(npoints):
+            breaks[i + 1] = test_local_points[0, i]
+        breaks[npoints + 1] = 1.0
+
+        corr = _np.zeros((nshape_test, nshape_trial), dtype=np.complex128)
+        sign = 1.0 if test_normal_multipliers[index] * trial_normal_multipliers[index] > 0 else -1.0
+        L = test_edge_lengths[index]
+
+        for seg in range(npoints + 1):
+            t0 = breaks[seg]
+            t1 = breaks[seg + 1]
+            seg_len = L * (t1 - t0)
+            tm = 0.5 * (t0 + t1)
+            mid_loc = _np.array([[tm], [0.0]])
+
+            phi_t_mid = test_shapeset(mid_loc)[:, 0]
+            phi_s_mid = trial_shapeset(mid_loc)[:, 0]
+
+            # approximate analytic integrals
+            F1 = seg_len * (_np.log(seg_len + 1e-16) - 1.0)
+            F2 = seg_len
+
+            for test_fun_index in range(nshape_test):
+                for trial_fun_index in range(nshape_trial):
+                    corr[test_fun_index, trial_fun_index] += phi_t_mid[test_fun_index] * phi_s_mid[trial_fun_index] * (F1 + sign * inv_k2 * F2)
+
+        # evaluate kernel on quadrature points
+        S1, S2 = kernel_evaluator(
+            test_global_points,
+            trial_global_points,
+            test_edge_lengths[index],
+            None,
+            kernel_parameters,
+        )
+
+        # compute the analytical integral first using the values on the subsegments and S1 and S2 then 
+        # compute numerically the outher integral, in all: 1/4pi Sum (weight(x_p))[phi(xp)S1(xp) -+ 1/k^2S2(xp)] with + when derivative test and trial 
+        # are of the same sign and - when they are of different sign
+    
         for test_fun_index in range(nshape_test):
             for trial_fun_index in range(nshape_trial):
+                acc = 0.0 + 0j
                 for point_index in range(npoints):
-                   continue 
+                    w = quad_weights[weights_offset + point_index]
+                    acc += w * (
+                        test_fun_values[test_fun_index, point_index] * trial_fun_values[trial_fun_index, point_index] * S1[point_index]
+                        + sign * inv_k2 * test_fun_values[test_fun_index, point_index] * trial_fun_values[trial_fun_index, point_index] * S2[point_index]
+                    )
+                result[
+                        nshape_trial * nshape_test * index
+                        + test_fun_index * nshape_trial
+                        + trial_fun_index
+                    ] += inv4pi * (acc + corr[test_fun_index, trial_fun_index])
 
 
 @_numba.jit(
