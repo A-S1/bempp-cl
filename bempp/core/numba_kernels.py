@@ -2830,12 +2830,13 @@ def thinwire_efield_regular_assembler(
         # The weak form for each test basis function (with derivative) is:
         #   Z_mn = int [ (dphi_m/dz)* (d/dz G_n(z)) + k2 phi_m G_n(z) ] dV
         # where the integration dV becomes (quad_weight * local_test_factor) for a line element.
-        for quad_point_index in range(n_quad_points):
-            for test_fun_index in range(nshape_test):
-                for trial_element_index in range(n_trial_elements):
-                    if is_adjacent[trial_element_index]:
-                        continue
-                    for trial_fun_index in range(nshape_trial):
+        
+        for test_fun_index in range(nshape_test):
+            for trial_element_index in range(n_trial_elements):
+                if is_adjacent[trial_element_index]:
+                    continue
+                for trial_fun_index in range(nshape_trial):
+                    for quad_point_index in range(n_quad_points):
                         integrand = ((test_basis_deriv[test_fun_index, quad_point_index] @ dLG_int[quad_point_index, trial_element_index, trial_fun_index]) +
                                      k2 * (test_basis_functions[i, test_fun_index, :, quad_point_index] @ LG_int[quad_point_index, trial_element_index, trial_fun_index]))
                         local_result[trial_element_index, test_fun_index, trial_fun_index] += integrand * (quad_weights[quad_point_index] * local_test_factor)
