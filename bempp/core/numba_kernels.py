@@ -147,7 +147,7 @@ def get_line_transform(grid_data, elements, local_points, local_multipliers):
         else:
             tangent = _np.zeros(3, dtype=_np.float64)
 
-        # apply local multipliers (usually 1) to the scalars
+        # apply local multipliers to the scalars
         m0 = local_multipliers[e_i, 0]
         m1 = local_multipliers[e_i, 1]
 
@@ -2817,7 +2817,7 @@ def thinwire_efield_regular_assembler(
 
         # --- Compute the Derivative of the Test Basis Functions with Respect to z ---
         # Allocate an array: shape (nshape_test, n_quad_points)
-        test_basis_deriv = _np.zeros((nshape_test, n_quad_points, 3), dtype=test_basis_functions.dtype)
+        test_basis_deriv = _np.zeros((nshape_test, n_quad_points, 3), dtype=result_type)
         for test_fun_index in range(nshape_test):
             for quad_point_index in range(n_quad_points):
                 if quad_point_index == 0:
@@ -2837,7 +2837,7 @@ def thinwire_efield_regular_assembler(
         
         for test_fun_index in range(nshape_test):
             for trial_element_index in range(n_trial_elements):
-                if is_adjacent[trial_element_index]:
+                if trial_elements[trial_element_index] == test_elements[i]:
                     continue
                 for trial_fun_index in range(nshape_trial):
                     for quad_point_index in range(n_quad_points):
@@ -2897,7 +2897,7 @@ def thinwire_efield_singular(
 
     test_edge_lengths = get_edge_lengths_line(grid_data, test_elements)
     trial_edge_lengths = get_edge_lengths_line(grid_data, trial_elements)
-    inv4pi = 1.0 / (4.0 * np.pi)
+    inv4pi = 1.0 / (4.0 * _np.pi)
 
     for index in _numba.prange(nelements):
         wavenumber = kernel_parameters[0] + 1j * kernel_parameters[1]
@@ -2919,16 +2919,18 @@ def thinwire_efield_singular(
             trial_points[:, trial_offset : trial_offset + npoints]
         )
 
-        test_fun_values = get_line_transform(
+        test_fun_vec_values = get_line_transform(
             grid_data,
             [test_element],
             test_points[:, test_offset : test_offset + npoints],
         )[0]
-        trial_fun_values = get_line_transform(
-            grid_data,
-            [trial_element],
-            trial_points[:, trial_offset : trial_offset + npoints],
-        )[0]
+
+        test_fun_values = _np.zeros((2, npoints), dtype=test_fun_vec_values.dtype)
+
+        for j in range(npoints):
+            test_fun_values[0, j] = _np.linalg.norm(test_fun_vec_values[:,0, j])
+            test_fun_values[1, j] = _np.linalg.norm(test_fun_vec_values[:,1, j])
+
 
         # here compute the subsegments of the test element between two quadrature points
         # then compute the value of the hatfunction at that point 
@@ -2940,27 +2942,7 @@ def thinwire_efield_singular(
             breaks[i + 1] = test_local_points[0, i]
         breaks[npoints + 1] = 1.0
 
-        corr = _np.zeros((nshape_test, nshape_trial), dtype=np.complex128)
         sign = 1.0 if test_normal_multipliers[index] * trial_normal_multipliers[index] > 0 else -1.0
-        L = test_edge_lengths[index]
-
-        for seg in range(npoints + 1):
-            t0 = breaks[seg]
-            t1 = breaks[seg + 1]
-            seg_len = L * (t1 - t0)
-            tm = 0.5 * (t0 + t1)
-            mid_loc = _np.array([[tm], [0.0]])
-
-            phi_t_mid = test_shapeset(mid_loc)[:, 0]
-            phi_s_mid = trial_shapeset(mid_loc)[:, 0]
-
-            # approximate analytic integrals
-            F1 = seg_len * (_np.log(seg_len + 1e-16) - 1.0)
-            F2 = seg_len
-
-            for test_fun_index in range(nshape_test):
-                for trial_fun_index in range(nshape_trial):
-                    corr[test_fun_index, trial_fun_index] += phi_t_mid[test_fun_index] * phi_s_mid[trial_fun_index] * (F1 + sign * inv_k2 * F2)
 
         # evaluate kernel on quadrature points
         S1, S2 = kernel_evaluator(
@@ -2977,18 +2959,14 @@ def thinwire_efield_singular(
     
         for test_fun_index in range(nshape_test):
             for trial_fun_index in range(nshape_trial):
-                acc = 0.0 + 0j
-                for point_index in range(npoints):
-                    w = quad_weights[weights_offset + point_index]
-                    acc += w * (
-                        test_fun_values[test_fun_index, point_index] * trial_fun_values[trial_fun_index, point_index] * S1[point_index]
-                        + sign * inv_k2 * test_fun_values[test_fun_index, point_index] * trial_fun_values[trial_fun_index, point_index] * S2[point_index]
-                    )
+                local_result = 0.0
+                for test_point_index in range(npoints):
+                    local_result += quad_weights[test_point_index] * (test_fun_values[test_fun_index, test_point_index] * S1[test_point_index] - sign * inv_k2 * S2[test_point_index])   
                 result[
                         nshape_trial * nshape_test * index
                         + test_fun_index * nshape_trial
                         + trial_fun_index
-                    ] += inv4pi * (acc + corr[test_fun_index, trial_fun_index])
+                    ] += inv4pi * local_result
 
 
 @_numba.jit(
