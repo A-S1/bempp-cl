@@ -568,7 +568,7 @@ class _SingularQuadratureRuleInterface1D(object):
 
         # 3) counts
         number_of_points_coincident = self._index_count["coincident"]
-        number_of_points_adjacentt = self._index_count["adjacent"]
+        # number_of_points_adjacentt = self._index_count["adjacent"]
         m_coincident = test_points_coincident.shape[-1]
         m_adjacent = test_points_adjacent.shape[-1]
 
