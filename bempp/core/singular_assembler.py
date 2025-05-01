@@ -4,6 +4,7 @@ import numpy as _np
 
 from bempp.api.assembly import assembler as _assembler
 from bempp.api.integration import duffy_galerkin as _duffy_galerkin
+from bempp.api.integration.gauss import rule as line_rule
 
 import collections as _collections
 
@@ -78,7 +79,6 @@ def assemble_singular_part(
     """Actually assemble the Numba kernel."""
     from bempp.api.utils.helpers import get_type
     from bempp.core.dispatcher import singular_assembler_dispatcher
-    from bempp.api.integration.gauss import rule as line_rule
     import bempp.api
 
     precision = operator_descriptor.precision
@@ -93,11 +93,14 @@ def assemble_singular_part(
     )
         
     elif "line" in grid.type.lower():
-        rule = line_rule(order)
+        rule = _SingularQuadratureRuleInterface1D(
+            grid, order, dual_to_range.support, domain.support
+        )
 
     number_of_test_shape_functions = dual_to_range.number_of_shape_functions
     number_of_trial_shape_functions = domain.number_of_shape_functions
 
+ 
     [
         test_points,
         trial_points,
@@ -109,6 +112,7 @@ def assemble_singular_part(
         weights_offsets,
         number_of_quad_points,
     ] = rule.get_arrays()
+
 
     if is_complex:
         result_type = get_type(precision).complex
@@ -510,3 +514,101 @@ class _SingularQuadratureRuleInterfaceGalerkin(object):
         ) + self.number_of_points("edge_adjacent")
 
         return test_offsets, trial_offsets, weights_offsets
+    
+
+
+class _SingularQuadratureRuleInterface1D(object):
+    def __init__(self, grid, order, test_support, trial_support):
+        self._grid  = grid
+        self._order = order
+
+        # only self and adjacent rules
+        self._coincident_rule = line_rule(order)
+    
+        self._adjacent_rule  = line_rule(order)
+        # which self-pairs survive
+        self._coincident_indices = _np.flatnonzero(test_support * trial_support)
+
+        # which neighbor‐pairs
+        pairs = _np.flatnonzero(
+          test_support[grid.vertex_adjacency[0]]
+          * trial_support[grid.vertex_adjacency[1]]
+        )
+        self._vertex_adj = grid.vertex_adjacency[:, pairs]
+
+        # counts
+        self._index_count = {
+          "coincident": len(self._coincident_indices),
+          "adjacent":   self._vertex_adj.shape[1],
+          "all":        len(self._coincident_indices) + self._vertex_adj.shape[1],
+        }
+
+    @property
+    def index_count(self): return self._index_count
+
+    def get_arrays(self):
+        # 1) assemble the flat lists of element‐pair indices
+        test_indices  = _np.hstack([
+            self._coincident_indices,
+            self._vertex_adj[0]
+        ])
+        trial_indices = _np.hstack([
+            self._coincident_indices,
+            self._vertex_adj[1]
+        ])
+
+        # 2) grab the reference rule data
+        test_points_coincident = self._coincident_rule.test_points    # shape (m_coincident,)
+        trial_points_coincident = self._coincident_rule.trial_points   # shape (m_coincident,)
+        weights_coincident  = self._coincident_rule.weights        # shape (m_coincident,)
+
+        test_points_adjacent = self._adjacent_rule.test_points      # shape (m_adjacent,)
+        trial_points_adjacent = self._adjacent_rule.trial_points     # shape (m_adjacent,)
+        weights_adjacentt  = self._adjacent_rule.weights          # shape (m_adjacent,)
+
+        # 3) counts
+        number_of_points_coincident = self._index_count["coincident"]
+        number_of_points_adjacentt = self._index_count["adjacent"]
+        m_coincident = test_points_coincident.shape[-1]
+        m_adjacent = test_points_adjacent.shape[-1]
+
+        # 4) tile the rule for each pair
+        test_points  = _np.hstack([
+            test_points_coincident,
+            _np.tile(test_points_adjacent,  number_of_points_adjacentt)
+        ])
+        trial_points = _np.hstack([
+            trial_points_coincident,
+            _np.tile(trial_points_adjacent, number_of_points_adjacentt)
+        ])
+        weights      = _np.hstack([
+            weights_coincident,
+            _np.tile(weights_adjacentt,  number_of_points_adjacentt)
+        ])
+
+        # 5) offsets into these big arrays for each element‐pair
+        test_offsets  = _np.empty(self._index_count["all"], dtype="uint32")
+        test_offsets[:number_of_points_coincident] = 0
+        test_offsets[number_of_points_coincident:] = m_coincident
+
+        trial_offsets = test_offsets.copy()
+        weights_offsets= test_offsets.copy()
+
+        # 6) how many quad points belong to each pair
+        number_of_quad_points = _np.empty(self._index_count["all"], dtype="uint32")
+        number_of_quad_points[:number_of_points_coincident]  = m_coincident
+        number_of_quad_points[number_of_points_coincident:]  = m_adjacent
+
+        arrays = [
+            test_points,
+            trial_points,
+            weights,
+            test_indices,
+            trial_indices,
+            test_offsets,
+            trial_offsets,
+            weights_offsets,
+            number_of_quad_points,
+        ]
+        return arrays
+
