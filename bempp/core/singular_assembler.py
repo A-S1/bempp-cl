@@ -558,13 +558,13 @@ class _SingularQuadratureRuleInterface1D(object):
         ])
 
         # 2) grab the reference rule data
-        test_points_coincident = self._coincident_rule.test_points    # shape (m_coincident,)
-        trial_points_coincident = self._coincident_rule.trial_points   # shape (m_coincident,)
-        weights_coincident  = self._coincident_rule.weights        # shape (m_coincident,)
+        test_points_coincident = self._coincident_rule[0]   # shape (m_coincident,)
+        trial_points_coincident = self._coincident_rule[0]   # shape (m_coincident,)
+        weights_coincident  = self._coincident_rule[1]       # shape (m_coincident,)
 
-        test_points_adjacent = self._adjacent_rule.test_points      # shape (m_adjacent,)
-        trial_points_adjacent = self._adjacent_rule.trial_points     # shape (m_adjacent,)
-        weights_adjacentt  = self._adjacent_rule.weights          # shape (m_adjacent,)
+        test_points_adjacent = self._adjacent_rule[0]     # shape (m_adjacent,)
+        trial_points_adjacent = self._adjacent_rule[0]     # shape (m_adjacent,)
+        weights_adjacentt  = self._adjacent_rule[1]         # shape (m_adjacent,)
 
         # 3) counts
         number_of_points_coincident = self._index_count["coincident"]
