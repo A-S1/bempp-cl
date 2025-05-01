@@ -539,8 +539,8 @@ class _SingularQuadratureRuleInterface1D(object):
         # counts
         self._index_count = {
           "coincident": len(self._coincident_indices),
-          "adjacent":   self._vertex_adj.shape[1],
-          "all":        len(self._coincident_indices) + self._vertex_adj.shape[1],
+          #"adjacent":   self._vertex_adj.shape[1],
+          "all":        len(self._coincident_indices),# + self._vertex_adj.shape[1],
         }
 
     @property
@@ -573,23 +573,23 @@ class _SingularQuadratureRuleInterface1D(object):
         m_adjacent = test_points_adjacent.shape[-1]
 
         # 4) tile the rule for each pair
-        test_points  = _np.hstack([
-            test_points_coincident,
-            _np.tile(test_points_adjacent,  number_of_points_adjacentt)
-        ])
-        trial_points = _np.hstack([
-            trial_points_coincident,
-            _np.tile(trial_points_adjacent, number_of_points_adjacentt)
-        ])
-        weights      = _np.hstack([
-            weights_coincident,
-            _np.tile(weights_adjacentt,  number_of_points_adjacentt)
-        ])
+        test_points  = test_points_coincident # _np.hstack([
+        #     test_points_coincident,
+        #     _np.tile(test_points_adjacent,  number_of_points_adjacentt)
+        # ])
+        trial_points = trial_points_coincident  #_np.hstack([
+        #     trial_points_coincident,
+        #     _np.tile(trial_points_adjacent, number_of_points_adjacentt)
+        # ])
+        weights      = weights_coincident #_np.hstack([
+        #     weights_coincident,
+        #     _np.tile(weights_adjacentt,  number_of_points_adjacentt)
+        # ])
 
         # 5) offsets into these big arrays for each element‐pair
         test_offsets  = _np.empty(self._index_count["all"], dtype="uint32")
         test_offsets[:number_of_points_coincident] = 0
-        test_offsets[number_of_points_coincident:] = m_coincident
+        # test_offsets[number_of_points_coincident:] = m_coincident
 
         trial_offsets = test_offsets.copy()
         weights_offsets= test_offsets.copy()
@@ -597,7 +597,7 @@ class _SingularQuadratureRuleInterface1D(object):
         # 6) how many quad points belong to each pair
         number_of_quad_points = _np.empty(self._index_count["all"], dtype="uint32")
         number_of_quad_points[:number_of_points_coincident]  = m_coincident
-        number_of_quad_points[number_of_points_coincident:]  = m_adjacent
+        # number_of_quad_points[number_of_points_coincident:]  = m_adjacent
 
         arrays = [
             test_points,
