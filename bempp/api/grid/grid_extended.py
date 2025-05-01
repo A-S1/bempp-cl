@@ -759,6 +759,7 @@ class LineGrid(ExtendedGrid):
         self._element_edges = None
         self._edge_adjacency = None  # Placeholder for consistency: not directly applicable.
         self._vertex_adjacency = None  # computed based on shared vertices.
+        self._edge_adjacency = None  # Placeholder for consistency, return only adjacent to self
         self._element_neighbors = None  # Placeholder.
         self._vertex_on_boundary = None
         self._edge_on_boundary = None
@@ -849,6 +850,20 @@ class LineGrid(ExtendedGrid):
     def vertex_adjacency(self):
         # For a line grid, vertex adjacency can be computed similarly to the surface grid.
         return self._vertex_adjacency  # Placeholder; implement as needed.
+    
+
+    @property
+    def edge_adjacency(self):
+        """
+        Edge adjacency information.
+
+        Returns a matrix with 6 rows. Each column has the entries e0,
+        e1, v00, v01, v11, v12, which means that element e0 is
+        connected to element e1. Vertex v00 in element e0 is
+        identical to vertex v11 in element e1, and vertex v01 in
+        element 0 is identical to vertex v12 in element e1.
+        """
+        return self._edge_adjacency
 
     @property
     def element_to_vertex_matrix(self):

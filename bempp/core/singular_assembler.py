@@ -78,6 +78,7 @@ def assemble_singular_part(
     """Actually assemble the Numba kernel."""
     from bempp.api.utils.helpers import get_type
     from bempp.core.dispatcher import singular_assembler_dispatcher
+    from bempp.api.integration.gauss import rule as line_rule
     import bempp.api
 
     precision = operator_descriptor.precision
@@ -86,10 +87,13 @@ def assemble_singular_part(
 
     grid = domain.grid
     order = parameters.quadrature.singular
-
-    rule = _SingularQuadratureRuleInterfaceGalerkin(
+    if "triangle" in grid.type.lower():
+        rule = _SingularQuadratureRuleInterfaceGalerkin(
         grid, order, dual_to_range.support, domain.support
     )
+        
+    elif "line" in grid.type.lower():
+        rule = line_rule(order)
 
     number_of_test_shape_functions = dual_to_range.number_of_shape_functions
     number_of_trial_shape_functions = domain.number_of_shape_functions
