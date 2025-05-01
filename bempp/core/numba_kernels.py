@@ -14,6 +14,7 @@ def select_numba_kernels(operator_descriptor, mode="regular"):
         "helmholtz_hypersingular": helmholtz_hypersingular_singular,
         "modified_helmholtz_hypersingular": modified_helmholtz_hypersingular_singular,
         "maxwell_electric_field": maxwell_efield_singular,
+        "maxwell_electric_field_thinwire": thinwire_efield_regular_assembler,
         "maxwell_magnetic_field": maxwell_mfield_singular,
     }
 
@@ -23,7 +24,7 @@ def select_numba_kernels(operator_descriptor, mode="regular"):
         "helmholtz_hypersingular": helmholtz_hypersingular_regular,
         "modified_helmholtz_hypersingular": modified_helmholtz_hypersingular_regular,
         "maxwell_electric_field": maxwell_efield_regular_assembler,
-        "maxwell_electric_field_thinwire": thinwire_efield_regular_assembler,
+        "maxwell_electric_field_thinwire": thinwire_efield_singular,
         "maxwell_magnetic_field": maxwell_mfield_regular_assembler,
     }
     
@@ -61,6 +62,7 @@ def select_numba_kernels(operator_descriptor, mode="regular"):
         "modified_helmholtz_single_layer": modified_helmholtz_single_layer_singular,
         "modified_helmholtz_double_layer": modified_helmholtz_double_layer_singular,
         "modified_helmholtz_adjoint_double_layer": modified_helmholtz_adjoint_double_layer_singular,
+        "thinwire_analytical_singular": thinwire_analytical_singular,
     }
 
     kernel_functions_sparse = {
@@ -496,11 +498,11 @@ def thinwire_analytical_singular(
         output_S2 = _np.zeros(3, dtype=dtype)
         for i in range(3):        
             output_S1[i] = 1 / test_normal * ( _np.sqrt(wire_radius**2 +
-                            (test_point[i] - test_normal)**2) - _np.sqrt(wire_radius**2 + test_point[i]**2) ) + test_point[i] / test_normal * _np.log( (test_point[i] + _np.sqrt( wire_radius**2 + test_point[i] **2 )) / (test_point[i] - test_normal + _np.sqrt( wire_radius**2 + (test_point[i] - test_normal)**2 )) )
+                            (test_points[i] - test_normal)**2) - _np.sqrt(wire_radius**2 + test_points[i]**2) ) + test_points[i] / test_normal * _np.log( (test_points[i] + _np.sqrt( wire_radius**2 + test_point[i] **2 )) / (test_points[i] - test_normal + _np.sqrt( wire_radius**2 + (test_points[i] - test_normal)**2 )) )
             
             output_S1[i] = output_S1[i] - 1j * wavenumber * test_normal
             
-            output_S2[i] = 1 / test_normal**2 * _np.log( (test_point[i] + _np.sqrt( wire_radius**2 + test_point[i] **2 )) / (test_point[i] - test_normal + _np.sqrt( wire_radius**2 + (test_point[i] - test_normal)**2 )) - 1j * wavenumber * test_normal) 
+            output_S2[i] = 1 / test_normal**2 * _np.log( (test_points[i] + _np.sqrt( wire_radius**2 + test_points[i] **2 )) / (test_points[i] - test_normal + _np.sqrt( wire_radius**2 + (test_points[i] - test_normal)**2 )) - 1j * wavenumber * test_normal) 
         
         S1[j] = output_S1
         S2[j] = output_S2
@@ -674,9 +676,12 @@ def helmholtz_far_field_double_layer(
     nopython=True, parallel=False, error_model="numpy", fastmath=True, boundscheck=False
 )
 def helmholtz_single_layer_singular(
-    test_points, trial_points, test_normal, trial_normal, kernel_parameters
+    test_points, trial_points, test_normal, trial_normal, kernel_parameters, wire_radius = None
 ):
     """Evaluate Helmholtz single layer for regular kernels."""
+    if wire_radius is not None:
+        S1, S2 = thinwire_analytical_singular(test_points, trial_points, test_normal, trial_normal, kernel_parameters, wire_radius)
+        return S1, S2
     wavenumber_real = kernel_parameters[0]
     wavenumber_imag = kernel_parameters[1]
     npoints = trial_points.shape[1]
