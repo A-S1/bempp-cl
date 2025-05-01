@@ -14,7 +14,7 @@ def select_numba_kernels(operator_descriptor, mode="regular"):
         "helmholtz_hypersingular": helmholtz_hypersingular_singular,
         "modified_helmholtz_hypersingular": modified_helmholtz_hypersingular_singular,
         "maxwell_electric_field": maxwell_efield_singular,
-        "maxwell_electric_field_thinwire": thinwire_efield_regular_assembler,
+        "maxwell_electric_field_thinwire": thinwire_efield_singular,
         "maxwell_magnetic_field": maxwell_mfield_singular,
     }
 
@@ -24,7 +24,7 @@ def select_numba_kernels(operator_descriptor, mode="regular"):
         "helmholtz_hypersingular": helmholtz_hypersingular_regular,
         "modified_helmholtz_hypersingular": modified_helmholtz_hypersingular_regular,
         "maxwell_electric_field": maxwell_efield_regular_assembler,
-        "maxwell_electric_field_thinwire": thinwire_efield_singular,
+        "maxwell_electric_field_thinwire": thinwire_efield_regular_assembler,
         "maxwell_magnetic_field": maxwell_mfield_regular_assembler,
     }
     
