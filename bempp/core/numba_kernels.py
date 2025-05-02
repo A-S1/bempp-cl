@@ -2925,6 +2925,7 @@ def thinwire_efield_singular(
             grid_data,
             [test_element],
             test_points[test_offset : test_offset + npoints],
+            test_normal_multipliers[index],
         )[0]
 
         test_fun_values = _np.zeros((2, npoints), dtype=test_fun_vec_values.dtype)
