@@ -491,21 +491,15 @@ def thinwire_analytical_singular(
     npoints = test_points.shape[1]
     dtype = trial_points.dtype
 
-    S1 = _np.zeros((npoints, 3), dtype=dtype)
-    S2 = _np.zeros((npoints, 3), dtype=dtype)
-    for j in range(npoints):
-        output_S1 = _np.zeros(3, dtype=dtype)
-        output_S2 = _np.zeros(3, dtype=dtype)
-        for i in range(3):        
-            output_S1[i] = 1 / test_normal * ( _np.sqrt(wire_radius**2 +
-                            (test_points[i] - test_normal)**2) - _np.sqrt(wire_radius**2 + test_points[i]**2) ) + test_points[i] / test_normal * _np.log( (test_points[i] + _np.sqrt( wire_radius**2 + test_point[i] **2 )) / (test_points[i] - test_normal + _np.sqrt( wire_radius**2 + (test_points[i] - test_normal)**2 )) )
+    S1 = _np.zeros(npoints, dtype=dtype)
+    S2 = _np.zeros(npoints, dtype=dtype)
+    for j in range(npoints):       
+            S1[j] = 1 / test_normal * ( _np.sqrt(wire_radius**2 +
+                            (test_points - test_normal)**2) - _np.sqrt(wire_radius**2 + test_points**2) ) + test_points / test_normal * _np.log( (test_points + _np.sqrt( wire_radius**2 + test_points **2 )) / (test_points - test_normal + _np.sqrt( wire_radius**2 + (test_points - test_normal)**2 )) )
             
-            output_S1[i] = output_S1[i] - 1j * wavenumber * test_normal
+            S1[j] -= 1j * wavenumber * test_normal
             
-            output_S2[i] = 1 / test_normal**2 * _np.log( (test_points[i] + _np.sqrt( wire_radius**2 + test_points[i] **2 )) / (test_points[i] - test_normal + _np.sqrt( wire_radius**2 + (test_points[i] - test_normal)**2 )) - 1j * wavenumber * test_normal) 
-        
-        S1[j] = output_S1
-        S2[j] = output_S2
+            S2[j] = 1 / test_normal**2 * _np.log( (test_points + _np.sqrt( wire_radius**2 + test_points **2 )) / (test_points - test_normal + _np.sqrt( wire_radius**2 + (test_points- test_normal)**2 )) - 1j * wavenumber * test_normal) 
     return S1, S2
 
 
