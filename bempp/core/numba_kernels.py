@@ -2960,8 +2960,7 @@ def thinwire_efield_singular(
                 local_result = 0.0
                 for test_point_index in range(npoints):
                     S1  = 1 / test_normal * ( _np.sqrt(wire_radius**2 +
-                            (test_points - test_normal)**2) - _np.sqrt(wire_radius**2 + test_points**2) ) + test_points / test_normal * _np.log( (test_points + _np.sqrt( wire_radius**2 + test_points **2 )) / (test_points - test_normal + _np.sqrt( wire_radius**2 + (test_points - test_normal)**2 )) )
-                    S1 -= 1j * wavenumber * test_normal
+                            (test_points - test_normal)**2) - _np.sqrt(wire_radius**2 + test_points**2) ) + test_points / test_normal * _np.log( (test_points + _np.sqrt( wire_radius**2 + test_points **2 )) / (test_points - test_normal + _np.sqrt( wire_radius**2 + (test_points - test_normal)**2 )) ) - 1j * wavenumber * test_normal
                     S2 = 1 / test_normal**2 * _np.log( (test_points + _np.sqrt( wire_radius**2 + test_points **2 )) / (test_points - test_normal + _np.sqrt( wire_radius**2 + (test_points- test_normal)**2 )) - 1j * wavenumber * test_normal) 
                     local_result += quad_weights[test_point_index] * (test_fun_values[test_fun_index, test_point_index] * S1[test_point_index] - sign * inv_k2 * S2[test_point_index])   
                 result[
