@@ -2945,13 +2945,16 @@ def thinwire_efield_singular(
         sign = 1.0 if test_normal_multipliers[index] * trial_normal_multipliers[index] > 0 else -1.0
 
         # evaluate kernel on quadrature points
-        S1, S2 = kernel_evaluator(
+        S = kernel_evaluator(
             test_global_points,
             trial_global_points,
             test_edge_lengths[index],
             None,
             kernel_parameters,
         )
+
+        S1 = S[0]
+        S2 = S[1]
 
         # compute the analytical integral first using the values on the subsegments and S1 and S2 then 
         # compute numerically the outher integral, in all: 1/4pi Sum (weight(x_p))[phi(xp)S1(xp) -+ 1/k^2S2(xp)] with + when derivative test and trial 
