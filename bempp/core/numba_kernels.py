@@ -682,27 +682,28 @@ def helmholtz_single_layer_singular(
     if wire_radius is not None:
         S1, S2 = thinwire_analytical_singular(test_points, trial_points, test_normal, trial_normal, kernel_parameters, wire_radius)
         return S1, S2
-    wavenumber_real = kernel_parameters[0]
-    wavenumber_imag = kernel_parameters[1]
-    npoints = trial_points.shape[1]
-    dtype = trial_points.dtype
-    rad = _np.zeros(npoints, dtype=dtype)
-    output_real = _np.zeros(npoints, dtype=dtype)
-    output_imag = _np.zeros(npoints, dtype=dtype)
-    m_inv_4pi = dtype.type(M_INV_4PI)
-    for i in range(3):
+    else:
+        wavenumber_real = kernel_parameters[0]
+        wavenumber_imag = kernel_parameters[1]
+        npoints = trial_points.shape[1]
+        dtype = trial_points.dtype
+        rad = _np.zeros(npoints, dtype=dtype)
+        output_real = _np.zeros(npoints, dtype=dtype)
+        output_imag = _np.zeros(npoints, dtype=dtype)
+        m_inv_4pi = dtype.type(M_INV_4PI)
+        for i in range(3):
+            for j in range(npoints):
+                rad[j] += (trial_points[i, j] - test_points[i, j]) ** 2
         for j in range(npoints):
-            rad[j] += (trial_points[i, j] - test_points[i, j]) ** 2
-    for j in range(npoints):
-        rad[j] = _np.sqrt(rad[j])
-    for j in range(npoints):
-        output_real[j] = _np.cos(wavenumber_real * rad[j]) * m_inv_4pi / rad[j]
-        output_imag[j] = _np.sin(wavenumber_real * rad[j]) * m_inv_4pi / rad[j]
-    if wavenumber_imag != 0:
+            rad[j] = _np.sqrt(rad[j])
         for j in range(npoints):
-            output_real[j] *= _np.exp(-wavenumber_imag * rad[j])
-            output_imag[j] *= _np.exp(-wavenumber_imag * rad[j])
-    return output_real + 1j * output_imag
+            output_real[j] = _np.cos(wavenumber_real * rad[j]) * m_inv_4pi / rad[j]
+            output_imag[j] = _np.sin(wavenumber_real * rad[j]) * m_inv_4pi / rad[j]
+        if wavenumber_imag != 0:
+            for j in range(npoints):
+                output_real[j] *= _np.exp(-wavenumber_imag * rad[j])
+                output_imag[j] *= _np.exp(-wavenumber_imag * rad[j])
+        return output_real + 1j * output_imag
 
 
 @_numba.jit(
