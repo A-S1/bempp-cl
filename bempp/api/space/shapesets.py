@@ -143,9 +143,9 @@ def _pwl0_shapeset_evaluate(local_coordinates):
     This function returns an array of shape (1, 2, npoints), where the first index is a dummy
     (for compatibility with vector spaces) and the second index corresponds to the two basis functions.
     """
-    npoints = local_coordinates.shape[1]
+    npoints = len(local_coordinates)
     result = _np.empty((1, 2, npoints), dtype=local_coordinates.dtype)
-    s = local_coordinates[0, :]
+    s = local_coordinates[:]
     result[0, 0, :] = 1.0 - s
     result[0, 1, :] = s
     return result
@@ -163,7 +163,7 @@ def _pwl0_shapeset_gradient(local_coordinates):
     To keep the same array shape as the gradients for other shapesets,
     we return an array of shape (1, 2, 1, npoints).
     """
-    npoints = local_coordinates.shape[1]
+    npoints = len(local_coordinates)
     result = _np.empty((1, 2, 1, npoints), dtype=local_coordinates.dtype)
     result[0, 0, 0, :] = -1.0
     result[0, 1, 0, :] = 1.0
