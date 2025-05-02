@@ -2924,7 +2924,7 @@ def thinwire_efield_singular(
         test_fun_vec_values = get_line_transform(
             grid_data,
             [test_element],
-            test_points[:, test_offset : test_offset + npoints],
+            test_points[test_offset : test_offset + npoints],
         )[0]
 
         test_fun_values = _np.zeros((2, npoints), dtype=test_fun_vec_values.dtype)
@@ -2937,12 +2937,6 @@ def thinwire_efield_singular(
         # here compute the subsegments of the test element between two quadrature points
         # then compute the value of the hatfunction at that point 
 
-
-        breaks = _np.empty(npoints + 2)
-        breaks[0] = 0.0
-        for i in range(npoints):
-            breaks[i + 1] = test_local_points[0, i]
-        breaks[npoints + 1] = 1.0
 
         sign = 1.0 if test_normal_multipliers[index] * trial_normal_multipliers[index] > 0 else -1.0
 
