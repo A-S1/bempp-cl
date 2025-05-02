@@ -2904,6 +2904,8 @@ def thinwire_efield_singular(
         inv_k2 = 1.0 / (wavenumber * wavenumber)
         test_element = test_elements[index]
         trial_element = trial_elements[index]
+        wire_radius = grid_data.wire_radius[index]	
+        test_normal = test_edge_lengths[index]  #get length of element
         test_offset = test_offsets[index]
         trial_offset = trial_offsets[index]
         weights_offset = weights_offsets[index]
@@ -2916,6 +2918,7 @@ def thinwire_efield_singular(
             test_points[test_offset : test_offset + npoints]
         )
  
+
         
 
         test_fun_vec_values = get_line_transform(
@@ -2947,8 +2950,6 @@ def thinwire_efield_singular(
             kernel_parameters,
         )
 
-        S1 = S[0]
-        S2 = S[1]
 
         # compute the analytical integral first using the values on the subsegments and S1 and S2 then 
         # compute numerically the outher integral, in all: 1/4pi Sum (weight(x_p))[phi(xp)S1(xp) -+ 1/k^2S2(xp)] with + when derivative test and trial 
@@ -2958,6 +2959,10 @@ def thinwire_efield_singular(
             for trial_fun_index in range(nshape_trial):
                 local_result = 0.0
                 for test_point_index in range(npoints):
+                    S1  = 1 / test_normal * ( _np.sqrt(wire_radius**2 +
+                            (test_points - test_normal)**2) - _np.sqrt(wire_radius**2 + test_points**2) ) + test_points / test_normal * _np.log( (test_points + _np.sqrt( wire_radius**2 + test_points **2 )) / (test_points - test_normal + _np.sqrt( wire_radius**2 + (test_points - test_normal)**2 )) )
+                    S1 -= 1j * wavenumber * test_normal
+                    S2 = 1 / test_normal**2 * _np.log( (test_points + _np.sqrt( wire_radius**2 + test_points **2 )) / (test_points - test_normal + _np.sqrt( wire_radius**2 + (test_points- test_normal)**2 )) - 1j * wavenumber * test_normal) 
                     local_result += quad_weights[test_point_index] * (test_fun_values[test_fun_index, test_point_index] * S1[test_point_index] - sign * inv_k2 * S2[test_point_index])   
                 result[
                         nshape_trial * nshape_test * index
