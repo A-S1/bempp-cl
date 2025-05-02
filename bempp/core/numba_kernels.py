@@ -2920,6 +2920,8 @@ def thinwire_efield_singular(
         test_fun_values = test_shapeset(
             test_points[test_offset : test_offset + npoints]
         )
+ 
+        print("multipliers index",_np.array(test_normal_multipliers[index]))
 
         test_fun_vec_values = get_line_transform(
             grid_data,
