@@ -543,8 +543,6 @@ class _SingularQuadratureRuleInterface1D(object):
           "all":        len(self._coincident_indices),# + self._vertex_adj.shape[1],
         }
 
-        print("coincident indices", self._coincident_indices)   
-        print("index count", self._index_count)
 
     @property
     def index_count(self): return self._index_count

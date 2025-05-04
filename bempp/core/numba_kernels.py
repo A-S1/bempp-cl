@@ -2964,7 +2964,8 @@ def thinwire_efield_singular(
                     S1  = 1 / test_normal * ( _np.sqrt(wire_radius**2 +
                             (test_global_points - test_normal)**2) - _np.sqrt(wire_radius**2 + test_global_points**2) ) + test_global_points / test_normal * _np.log( (test_global_points + _np.sqrt( wire_radius**2 + test_global_points **2 )) / (test_global_points - test_normal + _np.sqrt( wire_radius**2 + (test_global_points - test_normal)**2 )) ) - 1j * wavenumber * test_normal
                     S2 = 1 / test_normal**2 * _np.log( (test_global_points + _np.sqrt( wire_radius**2 + test_global_points **2 )) / (test_global_points - test_normal + _np.sqrt( wire_radius**2 + (test_global_points- test_normal)**2 )) - 1j * wavenumber * test_normal) 
-                    local_result += quad_weights[weights_offset + test_point_index] * (test_fun_values[test_fun_index, test_point_index] * S1[test_point_index] - sign * inv_k2 * S2[test_point_index])   
+                    local_result += quad_weights[weights_offset + test_point_index] * (test_fun_values[test_fun_index, test_point_index] * S1 - sign * inv_k2 * S2)   
+                    print(local_result)
                 result[
                         nshape_trial * nshape_test * index
                         + test_fun_index * nshape_trial
