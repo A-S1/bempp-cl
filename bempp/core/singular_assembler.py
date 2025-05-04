@@ -548,10 +548,10 @@ class _SingularQuadratureRuleInterface1D(object):
     def index_count(self): return self._index_count
 
     @property
-    def trial_indices: return self._coincident_indices
+    def trial_indices(self): return self._coincident_indices
 
     @property
-    def test_indices: return self._coincident_indices
+    def test_indices(self): return self._coincident_indices
 
     def get_arrays(self):
         # 1) assemble the flat lists of element‐pair indices
