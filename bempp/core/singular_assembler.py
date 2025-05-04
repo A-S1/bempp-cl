@@ -545,20 +545,21 @@ class _SingularQuadratureRuleInterface1D(object):
 
         print("coincident indices", self._coincident_indices)   
         print("index count", self._index_count)
-        
+
     @property
     def index_count(self): return self._index_count
 
     def get_arrays(self):
         # 1) assemble the flat lists of element‐pair indices
-        test_indices  = _np.hstack([
-            self._coincident_indices,
-            self._vertex_adj[0]
-        ])
-        trial_indices = _np.hstack([
-            self._coincident_indices,
-            self._vertex_adj[1]
-        ])
+        test_indices  = self._coincident_indices #_np.hstack([
+        #     self._coincident_indices,
+        #     self._vertex_adj[0]
+        # ])
+        trial_indices = self._coincident_indices 
+        # trial_indices = _np.hstack([
+        #     self._coincident_indices,
+        #     self._vertex_adj[1]
+        # ])
 
         # 2) grab the reference rule data
         test_points_coincident = self._coincident_rule[0]   # shape (m_coincident,)
