@@ -2746,6 +2746,7 @@ def thinwire_efield_regular_assembler(
             )
 
     # --- Main Assembly Loop over Test Elements (Parallelized) ---
+    print("n_test_elements", n_test_elements)
     for i in _numba.prange(n_test_elements):
         test_element = test_elements[i]
         local_result = _np.zeros((n_trial_elements, nshape_test, nshape_trial), dtype=result_type)
@@ -2894,6 +2895,7 @@ def thinwire_efield_singular(
     
 
     nelements = len(test_elements)
+    print(f"nelements: {nelements}")
 
     test_edge_lengths = get_edge_lengths_line(grid_data, test_elements)
     trial_edge_lengths = get_edge_lengths_line(grid_data, trial_elements)
@@ -2960,9 +2962,9 @@ def thinwire_efield_singular(
                 local_result = 0.0
                 for test_point_index in range(npoints):
                     S1  = 1 / test_normal * ( _np.sqrt(wire_radius**2 +
-                            (test_points - test_normal)**2) - _np.sqrt(wire_radius**2 + test_points**2) ) + test_points / test_normal * _np.log( (test_points + _np.sqrt( wire_radius**2 + test_points **2 )) / (test_points - test_normal + _np.sqrt( wire_radius**2 + (test_points - test_normal)**2 )) ) - 1j * wavenumber * test_normal
-                    S2 = 1 / test_normal**2 * _np.log( (test_points + _np.sqrt( wire_radius**2 + test_points **2 )) / (test_points - test_normal + _np.sqrt( wire_radius**2 + (test_points- test_normal)**2 )) - 1j * wavenumber * test_normal) 
-                    local_result += quad_weights[test_point_index] * (test_fun_values[test_fun_index, test_point_index] * S1[test_point_index] - sign * inv_k2 * S2[test_point_index])   
+                            (test_global_points - test_normal)**2) - _np.sqrt(wire_radius**2 + test_global_points**2) ) + test_global_points / test_normal * _np.log( (test_global_points + _np.sqrt( wire_radius**2 + test_global_points **2 )) / (test_global_points - test_normal + _np.sqrt( wire_radius**2 + (test_global_points - test_normal)**2 )) ) - 1j * wavenumber * test_normal
+                    S2 = 1 / test_normal**2 * _np.log( (test_global_points + _np.sqrt( wire_radius**2 + test_global_points **2 )) / (test_global_points - test_normal + _np.sqrt( wire_radius**2 + (test_global_points- test_normal)**2 )) - 1j * wavenumber * test_normal) 
+                    local_result += quad_weights[weights_offset + test_point_index] * (test_fun_values[test_fun_index, test_point_index] * S1[test_point_index] - sign * inv_k2 * S2[test_point_index])   
                 result[
                         nshape_trial * nshape_test * index
                         + test_fun_index * nshape_trial
