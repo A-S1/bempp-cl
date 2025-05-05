@@ -2973,8 +2973,6 @@ def thinwire_efield_regular_assembler(
             for trial_element_index in range(n_trial_elements):
                 if trial_elements[trial_element_index] == test_elements[i]:
                     continue
-                if is_adjacent[trial_element_index]:
-                    continue
                 for trial_fun_index in range(nshape_trial):
                     for quad_point_index in range(n_quad_points):
                         integrand = ((test_basis_deriv[test_fun_index, quad_point_index] * dLG_int[quad_point_index, trial_element_index, trial_fun_index]) +
