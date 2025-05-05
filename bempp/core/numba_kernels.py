@@ -2956,9 +2956,9 @@ def thinwire_efield_regular_assembler(
                     test_basis_deriv_z[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, 2, quad_point_index+1] - test_basis_functions[i, test_fun_index, 2, quad_point_index-1]) / dz
 
                     if dx == 0:
-                        ttest_basis_deriv_x[test_fun_index, quad_point_index] = 0
+                        test_basis_deriv_x[test_fun_index, quad_point_index] = 0
                     if dy == 0:
-                        ttest_basis_deriv_y[test_fun_index, quad_point_index] = 0
+                        test_basis_deriv_y[test_fun_index, quad_point_index] = 0
                     if dz == 0:
                         test_basis_deriv_z[test_fun_index, quad_point_index] = 0
         
