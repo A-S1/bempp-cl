@@ -2856,27 +2856,27 @@ def thinwire_efield_regular_assembler(
                     dy =_np.linalg.norm(test_global_points[1, quad_point_index] - test_global_points[1, quad_point_index + 1])
                     dz =_np.linalg.norm(test_global_points[2, quad_point_index] - test_global_points[2, quad_point_index + 1])
 
-                    test_basis_deriv_x[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, :, quad_point_index+1, 0] - test_basis_functions[i, test_fun_index, :, quad_point_index, 0]) / dx
-                    test_basis_deriv_y[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, :, quad_point_index+1, 1] - test_basis_functions[i, test_fun_index, :, quad_point_index, 1]) / dy
-                    test_basis_deriv_z[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, :, quad_point_index+1, 2] - test_basis_functions[i, test_fun_index, :, quad_point_index, 2]) / dz
+                    test_basis_deriv_x[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, 0, quad_point_index+1] - test_basis_functions[i, test_fun_index, 0, quad_point_index]) / dx
+                    test_basis_deriv_y[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, 1, quad_point_index+1] - test_basis_functions[i, test_fun_index, 1, quad_point_index]) / dy
+                    test_basis_deriv_z[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, 2, quad_point_index+1] - test_basis_functions[i, test_fun_index, 2, quad_point_index]) / dz
 
                 elif quad_point_index == n_quad_points - 1:
                     dx =_np.linalg.norm(test_global_points[0, quad_point_index] - test_global_points[0, quad_point_index - 1])
                     dy =_np.linalg.norm(test_global_points[1, quad_point_index] - test_global_points[1, quad_point_index - 1])
                     dz =_np.linalg.norm(test_global_points[2, quad_point_index] - test_global_points[2, quad_point_index - 1])
 
-                    test_basis_deriv_x[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, :, quad_point_index, 0] - test_basis_functions[i, test_fun_index, :, quad_point_index-1, 0]) / dx
-                    test_basis_deriv_y[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, :, quad_point_index, 1] - test_basis_functions[i, test_fun_index, :, quad_point_index-1, 1]) / dy
-                    test_basis_deriv_z[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, :, quad_point_index, 2] - test_basis_functions[i, test_fun_index, :, quad_point_index-1, 2]) / dz
+                    test_basis_deriv_x[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, 0, quad_point_index] - test_basis_functions[i, test_fun_index, 0, quad_point_index-1]) / dx
+                    test_basis_deriv_y[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, 1, quad_point_index] - test_basis_functions[i, test_fun_index, 1, quad_point_index-1]) / dy
+                    test_basis_deriv_z[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, 2, quad_point_index] - test_basis_functions[i, test_fun_index, 2, quad_point_index-1]) / dz
 
                 else:
                     dx = _np.linalg.norm(test_global_points[0, quad_point_index - 1] - test_global_points[0, quad_point_index + 1])
                     dy = _np.linalg.norm(test_global_points[1, quad_point_index - 1] - test_global_points[1, quad_point_index + 1])
                     dz = _np.linalg.norm(test_global_points[2, quad_point_index - 1] - test_global_points[2, quad_point_index + 1])
 
-                    test_basis_deriv_x[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, :, quad_point_index+1, 0] - test_basis_functions[i, test_fun_index, :, quad_point_index-1, 0]) / dx
-                    test_basis_deriv_y[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, :, quad_point_index+1, 1] - test_basis_functions[i, test_fun_index, :, quad_point_index-1, 1]) / dy
-                    test_basis_deriv_z[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, :, quad_point_index+1, 2] - test_basis_functions[i, test_fun_index, :, quad_point_index-1, 2]) / dz
+                    test_basis_deriv_x[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, 0, quad_point_index+1] - test_basis_functions[i, test_fun_index, 0, quad_point_index-1]) / dx
+                    test_basis_deriv_y[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, 1, quad_point_index+1] - test_basis_functions[i, test_fun_index, 1, quad_point_index-1]) / dy
+                    test_basis_deriv_z[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, 2, quad_point_index+1] - test_basis_functions[i, test_fun_index, 2, quad_point_index-1]) / dz
         
         test_basis_deriv = test_basis_deriv_x + test_basis_deriv_y + test_basis_deriv_z
 
