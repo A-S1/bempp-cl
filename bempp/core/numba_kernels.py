@@ -2826,6 +2826,13 @@ def thinwire_efield_regular_assembler(
                         dLG_int_y[quad_point_index, trial_element_index, trial_fun_index] = (LG_int[quad_point_index+1, trial_element_index, trial_fun_index, 1] - LG_int[quad_point_index, trial_element_index, trial_fun_index, 1]) / dy
                         dLG_int_z[quad_point_index, trial_element_index, trial_fun_index] = (LG_int[quad_point_index+1, trial_element_index, trial_fun_index, 2] - LG_int[quad_point_index, trial_element_index, trial_fun_index, 2]) / dz
 
+                        if dx == 0:
+                            dLG_int_x[quad_point_index, trial_element_index, trial_fun_index] = 0
+                        if dy == 0:
+                            dLG_int_y[quad_point_index, trial_element_index, trial_fun_index] = 0
+                        if dz == 0:
+                            dLG_int_z[quad_point_index, trial_element_index, trial_fun_index] = 0
+
                         dLG_int[quad_point_index, trial_element_index, trial_fun_index] = dLG_int_x[quad_point_index, trial_element_index, trial_fun_index] + dLG_int_y[quad_point_index, trial_element_index, trial_fun_index] + dLG_int_z[quad_point_index, trial_element_index, trial_fun_index]
                     elif quad_point_index == n_quad_points - 1:
                         dx =_np.linalg.norm(test_global_points[0, quad_point_index] - test_global_points[0, quad_point_index - 1])
@@ -2843,6 +2850,13 @@ def thinwire_efield_regular_assembler(
                         dLG_int_y[quad_point_index, trial_element_index, trial_fun_index] = (LG_int[quad_point_index, trial_element_index, trial_fun_index, 1] - LG_int[quad_point_index-1, trial_element_index, trial_fun_index, 1]) / dy
                         dLG_int_z[quad_point_index, trial_element_index, trial_fun_index] = (LG_int[quad_point_index, trial_element_index, trial_fun_index, 2] - LG_int[quad_point_index-1, trial_element_index, trial_fun_index, 2]) / dz
 
+                        if dx == 0:
+                            dLG_int_x[quad_point_index, trial_element_index, trial_fun_index] = 0
+                        if dy == 0:
+                            dLG_int_y[quad_point_index, trial_element_index, trial_fun_index] = 0
+                        if dz == 0:
+                            dLG_int_z[quad_point_index, trial_element_index, trial_fun_index] = 0
+
                         dLG_int[quad_point_index, trial_element_index, trial_fun_index] = dLG_int_x[quad_point_index, trial_element_index, trial_fun_index] + dLG_int_y[quad_point_index, trial_element_index, trial_fun_index] + dLG_int_z[quad_point_index, trial_element_index, trial_fun_index]
                     else:
                         dx = _np.linalg.norm(test_global_points[0, quad_point_index - 1] - test_global_points[0, quad_point_index + 1])
@@ -2859,6 +2873,13 @@ def thinwire_efield_regular_assembler(
                         dLG_int_x[quad_point_index, trial_element_index, trial_fun_index] = (LG_int[quad_point_index+1, trial_element_index, trial_fun_index, 0] - LG_int[quad_point_index-1, trial_element_index, trial_fun_index, 0]) / dx
                         dLG_int_y[quad_point_index, trial_element_index, trial_fun_index] = (LG_int[quad_point_index+1, trial_element_index, trial_fun_index, 1] - LG_int[quad_point_index-1, trial_element_index, trial_fun_index, 1]) / dy
                         dLG_int_z[quad_point_index, trial_element_index, trial_fun_index] = (LG_int[quad_point_index+1, trial_element_index, trial_fun_index, 2] - LG_int[quad_point_index-1, trial_element_index, trial_fun_index, 2]) / dz
+
+                        if dx == 0:
+                            dLG_int_x[quad_point_index, trial_element_index, trial_fun_index] = 0
+                        if dy == 0:
+                            dLG_int_y[quad_point_index, trial_element_index, trial_fun_index] = 0
+                        if dz == 0:
+                            dLG_int_z[quad_point_index, trial_element_index, trial_fun_index] = 0
 
                         dLG_int[quad_point_index, trial_element_index, trial_fun_index] = dLG_int_x[quad_point_index, trial_element_index, trial_fun_index] + dLG_int_y[quad_point_index, trial_element_index, trial_fun_index] + dLG_int_z[quad_point_index, trial_element_index, trial_fun_index]
 
@@ -2888,6 +2909,13 @@ def thinwire_efield_regular_assembler(
                     test_basis_deriv_y[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, 1, quad_point_index+1] - test_basis_functions[i, test_fun_index, 1, quad_point_index]) / dy
                     test_basis_deriv_z[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, 2, quad_point_index+1] - test_basis_functions[i, test_fun_index, 2, quad_point_index]) / dz
 
+                    if dx == 0:
+                        test_basis_deriv_x[test_fun_index, quad_point_index] = 0
+                    if dy == 0:
+                        test_basis_deriv_y[test_fun_index, quad_point_index] = 0
+                    if dz == 0:
+                        test_basis_deriv_z[test_fun_index, quad_point_index] = 0
+
                 elif quad_point_index == n_quad_points - 1:
                     dx =_np.linalg.norm(test_global_points[0, quad_point_index] - test_global_points[0, quad_point_index - 1])
                     dy =_np.linalg.norm(test_global_points[1, quad_point_index] - test_global_points[1, quad_point_index - 1])
@@ -2904,6 +2932,13 @@ def thinwire_efield_regular_assembler(
                     test_basis_deriv_y[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, 1, quad_point_index] - test_basis_functions[i, test_fun_index, 1, quad_point_index-1]) / dy
                     test_basis_deriv_z[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, 2, quad_point_index] - test_basis_functions[i, test_fun_index, 2, quad_point_index-1]) / dz
 
+                    if dx == 0:
+                        test_basis_deriv_x[test_fun_index, quad_point_index] = 0
+                    if dy == 0:
+                        test_basis_deriv_y[test_fun_index, quad_point_index] = 0
+                    if dz == 0:
+                        test_basis_deriv_z[test_fun_index, quad_point_index] = 0
+
                 else:
                     dx = _np.linalg.norm(test_global_points[0, quad_point_index - 1] - test_global_points[0, quad_point_index + 1])
                     dy = _np.linalg.norm(test_global_points[1, quad_point_index - 1] - test_global_points[1, quad_point_index + 1])
@@ -2919,6 +2954,13 @@ def thinwire_efield_regular_assembler(
                     test_basis_deriv_x[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, 0, quad_point_index+1] - test_basis_functions[i, test_fun_index, 0, quad_point_index-1]) / dx
                     test_basis_deriv_y[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, 1, quad_point_index+1] - test_basis_functions[i, test_fun_index, 1, quad_point_index-1]) / dy
                     test_basis_deriv_z[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, 2, quad_point_index+1] - test_basis_functions[i, test_fun_index, 2, quad_point_index-1]) / dz
+
+                    if dx == 0:
+                        dtest_basis_deriv_x[test_fun_index, quad_point_index] = 0
+                    if dy == 0:
+                        dtest_basis_deriv_y[test_fun_index, quad_point_index] = 0
+                    if dz == 0:
+                        dtest_basis_deriv_z[test_fun_index, quad_point_index] = 0
         
         test_basis_deriv = test_basis_deriv_x + test_basis_deriv_y + test_basis_deriv_z
 
