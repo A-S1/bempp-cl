@@ -2979,7 +2979,7 @@ def thinwire_efield_regular_assembler(
                                      k2 * (test_basis_functions[i, test_fun_index, :, quad_point_index] @ LG_int[quad_point_index, trial_element_index, trial_fun_index]))
                         local_result[trial_element_index, test_fun_index, trial_fun_index] += integrand * (quad_weights[quad_point_index] * local_test_factor)
                     
-                    #print(f"test_element: {i}, trial_element: {trial_element_index}, test_fun_index: {test_fun_index}, trial_fun_index: {trial_fun_index}, integrand: {integrand}, local_result: {local_result[trial_element_index, test_fun_index, :]}")
+                    print(f"test_element: {i}, trial_element: {trial_element_index}, test_fun_index: {test_fun_index}, trial_fun_index: {trial_fun_index}, integrand: {integrand}, local_result: {local_result[trial_element_index, test_fun_index, :]}")
                     
 
         # --- Accumulate the Local Results into the Global Matrix ---
