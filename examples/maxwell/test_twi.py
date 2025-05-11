@@ -7,7 +7,7 @@ k = 2 * np.pi / wavelength
 
 # grid_surface = bempp.api.import_grid("examples/maxwell/plane2.msh")
 
-grid = bempp.api.import_grid("examples/maxwell/line_mesh.msh")
+grid = bempp.api.import_grid("examples/maxwell/line_mesh_L.msh")
 # grid.plot()
 
 if hasattr(grid, 'line_mask'):
@@ -65,6 +65,7 @@ norm_list = []
 
 for order in testing_quad_order:
     parameters.quadrature.singular = order
+    parameters.quadrature.regular = order
 
     elec = bempp.api.operators.boundary.maxwell.electric_field(space, space, space, k, parameters=parameters)
     mat = elec.weak_form().to_dense()
