@@ -2934,8 +2934,8 @@ def thinwire_efield_regular_assembler(
             for trial_element_index in range(n_trial_elements):
                 if trial_elements[trial_element_index] == test_elements[i]:
                     continue
-                if is_adjacent[trial_element_index]:
-                    continue
+                # if is_adjacent[trial_element_index]:
+                #     continue
                 for trial_fun_index in range(nshape_trial):
                     for quad_point_index in range(n_quad_points):
                         integrand = ((test_basis_deriv[test_fun_index, quad_point_index] * dLG_int[quad_point_index, trial_element_index, trial_fun_index]) +
@@ -3052,7 +3052,9 @@ def thinwire_efield_singular(
         # compute the analytical integral first using the values on the subsegments and S1 and S2 then 
         # compute numerically the outher integral, in all: 1/4pi Sum (weight(x_p))[phi(xp)S1(xp) -+ 1/k^2S2(xp)] with + when derivative test and trial 
         # are of the same sign and - when they are of different sign
-    
+        # then compute the value of the integral at the quadrature points
+
+
         for test_fun_index in range(nshape_test):
             for trial_fun_index in range(nshape_trial):
                 local_result = 0.0
