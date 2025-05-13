@@ -171,6 +171,42 @@ def get_line_transform(grid_data, elements, local_points, local_multipliers):
 @_numba.jit(
     nopython=True, parallel=False, error_model="numpy", fastmath=True, boundscheck=False
 )
+def get_divergence_line(grid_data, elements, local_points, local_multipliers):
+    """Compute the divergence of the line elements."""
+    npoints = local_points.shape[1]
+    nelements = len(elements)
+    result = _np.zeros((nelements, 2, npoints), dtype=local_points.dtype)
+
+    m0 = local_multipliers[:, 0]
+    m1 = local_multipliers[:, 1]
+
+    for element_index in _numba.prange(nelements):
+        e = elements[element_index]
+        # end‐points
+        v0 = grid_data.vertices[:, grid_data.elements[0, e]]
+        v1 = grid_data.vertices[:, grid_data.elements[1, e]]
+        seg = v1 - v0
+        length = _np.linalg.norm(seg)
+        if length > 0.0:
+            tangent = seg / length
+        else:
+            tangent = _np.zeros(3, dtype=_np.float64)
+
+        m0 = local_multipliers[element_index, 0]
+        m1 = local_multipliers[element_index, 1]
+
+        for qp in range(npoints):
+        
+            # fill the vector basis functions
+            result[element_index, 0, qp] = _np.linalg.norm(tangent * m0, 1)
+            result[element_index, 1, qp] = _np.linalg.norm(tangent * m1, 1)
+     
+    return result
+
+
+@_numba.jit(
+    nopython=True, parallel=False, error_model="numpy", fastmath=True, boundscheck=False
+)
 def get_edge_lengths(grid_data, elements):
     """Compute the edge lengths for the given elements."""
     nelements = len(elements)
@@ -2731,6 +2767,9 @@ def thinwire_efield_regular_assembler(
     test_basis_functions = get_line_transform(test_grid_data, test_elements, quad_points, test_multipliers)
     trial_basis_functions = get_line_transform(trial_grid_data, trial_elements, quad_points, trial_multipliers)	
 
+    test_basis_divergence = get_divergence_line(test_grid_data, test_elements, quad_points, test_multipliers)
+    trial_basis_divergence = get_divergence_line(trial_grid_data, trial_elements, quad_points, trial_multipliers)
+
     # --- Compute Edge Lengths for Each Segment ---
     test_edge_lengths = get_edge_lengths_line(test_grid_data, test_elements)
     trial_edge_lengths = get_edge_lengths_line(trial_grid_data, trial_elements)
@@ -2789,141 +2828,8 @@ def thinwire_efield_regular_assembler(
             )
             
             # kernel_values is a flat array of length (n_trial_elements * n_quad_points)
-            # accumulate the contributions over the trial quadrature points for each trial element and trial basis function.
-            for trial_element_index in range(n_trial_elements):
-                for trial_fun_index in range(nshape_trial):
-                    summation = _np.zeros(3, dtype=result_type)
-                    for trial_point_index in range(n_quad_points):
-                        idx = trial_element_index * n_quad_points + trial_point_index
-                        for j in range(3):
-                            summation[j] += kernel_values[idx] * trial_basis_functions[trial_element_index, trial_fun_index, j, trial_point_index] * factors[idx]
-                    LG_int[test_point_index, trial_element_index, trial_fun_index, :] = summation
 
-        # --- Compute the Derivative of the Inner Integral with Respect to z ---
-        # Use a central difference scheme (forward/backward differences at boundaries).
-        dLG_int_x = _np.zeros((n_quad_points, n_trial_elements, nshape_trial), dtype=result_type)
-        dLG_int_y = _np.zeros((n_quad_points, n_trial_elements, nshape_trial), dtype=result_type)
-        dLG_int_z = _np.zeros((n_quad_points, n_trial_elements, nshape_trial), dtype=result_type)
-
-        dLG_int = _np.zeros((n_quad_points, n_trial_elements, nshape_trial), dtype=result_type)
-
-        for trial_element_index in range(n_trial_elements):            
-            for trial_fun_index in range(nshape_trial):
-                for quad_point_index in range(n_quad_points):
-                    if quad_point_index == 0:
-                        dx =_np.linalg.norm(test_global_points[0, quad_point_index] - test_global_points[0, quad_point_index + 1])
-                        dy =_np.linalg.norm(test_global_points[1, quad_point_index] - test_global_points[1, quad_point_index + 1])
-                        dz =_np.linalg.norm(test_global_points[2, quad_point_index] - test_global_points[2, quad_point_index + 1])
-
-                        if dx == 0:
-                            dx = 1e-10
-                        if dy == 0:
-                            dy = 1e-10
-                        if dz == 0:
-                            dz = 1e-10
-
-                        dLG_int_x[quad_point_index, trial_element_index, trial_fun_index] = (LG_int[quad_point_index+1, trial_element_index, trial_fun_index, 0] - LG_int[quad_point_index, trial_element_index, trial_fun_index, 0]) / dx
-                        dLG_int_y[quad_point_index, trial_element_index, trial_fun_index] = (LG_int[quad_point_index+1, trial_element_index, trial_fun_index, 1] - LG_int[quad_point_index, trial_element_index, trial_fun_index, 1]) / dy
-                        dLG_int_z[quad_point_index, trial_element_index, trial_fun_index] = (LG_int[quad_point_index+1, trial_element_index, trial_fun_index, 2] - LG_int[quad_point_index, trial_element_index, trial_fun_index, 2]) / dz
-
-                        dLG_int[quad_point_index, trial_element_index, trial_fun_index] = dLG_int_x[quad_point_index, trial_element_index, trial_fun_index] + dLG_int_y[quad_point_index, trial_element_index, trial_fun_index] + dLG_int_z[quad_point_index, trial_element_index, trial_fun_index]
-                    elif quad_point_index == n_quad_points - 1:
-                        dx =_np.linalg.norm(test_global_points[0, quad_point_index] - test_global_points[0, quad_point_index - 1])
-                        dy =_np.linalg.norm(test_global_points[1, quad_point_index] - test_global_points[1, quad_point_index - 1])
-                        dz =_np.linalg.norm(test_global_points[2, quad_point_index] - test_global_points[2, quad_point_index - 1])
-
-                        if dx == 0:
-                            dx = 1e-10
-                        if dy == 0:
-                            dy = 1e-10
-                        if dz == 0:
-                            dz = 1e-10
-
-                        dLG_int_x[quad_point_index, trial_element_index, trial_fun_index] = (LG_int[quad_point_index, trial_element_index, trial_fun_index, 0] - LG_int[quad_point_index-1, trial_element_index, trial_fun_index, 0]) / dx
-                        dLG_int_y[quad_point_index, trial_element_index, trial_fun_index] = (LG_int[quad_point_index, trial_element_index, trial_fun_index, 1] - LG_int[quad_point_index-1, trial_element_index, trial_fun_index, 1]) / dy
-                        dLG_int_z[quad_point_index, trial_element_index, trial_fun_index] = (LG_int[quad_point_index, trial_element_index, trial_fun_index, 2] - LG_int[quad_point_index-1, trial_element_index, trial_fun_index, 2]) / dz
-
-                        dLG_int[quad_point_index, trial_element_index, trial_fun_index] = dLG_int_x[quad_point_index, trial_element_index, trial_fun_index] + dLG_int_y[quad_point_index, trial_element_index, trial_fun_index] + dLG_int_z[quad_point_index, trial_element_index, trial_fun_index]
-                    else:
-                        dx = _np.linalg.norm(test_global_points[0, quad_point_index - 1] - test_global_points[0, quad_point_index + 1])
-                        dy = _np.linalg.norm(test_global_points[1, quad_point_index - 1] - test_global_points[1, quad_point_index + 1])
-                        dz = _np.linalg.norm(test_global_points[2, quad_point_index - 1] - test_global_points[2, quad_point_index + 1])
-
-                        if dx == 0:
-                            dx = 1e-10
-                        if dy == 0:
-                            dy = 1e-10
-                        if dz == 0:
-                            dz = 1e-10
-
-                        dLG_int_x[quad_point_index, trial_element_index, trial_fun_index] = (LG_int[quad_point_index+1, trial_element_index, trial_fun_index, 0] - LG_int[quad_point_index-1, trial_element_index, trial_fun_index, 0]) / dx
-                        dLG_int_y[quad_point_index, trial_element_index, trial_fun_index] = (LG_int[quad_point_index+1, trial_element_index, trial_fun_index, 1] - LG_int[quad_point_index-1, trial_element_index, trial_fun_index, 1]) / dy
-                        dLG_int_z[quad_point_index, trial_element_index, trial_fun_index] = (LG_int[quad_point_index+1, trial_element_index, trial_fun_index, 2] - LG_int[quad_point_index-1, trial_element_index, trial_fun_index, 2]) / dz
-
-
-                        dLG_int[quad_point_index, trial_element_index, trial_fun_index] = dLG_int_x[quad_point_index, trial_element_index, trial_fun_index] + dLG_int_y[quad_point_index, trial_element_index, trial_fun_index] + dLG_int_z[quad_point_index, trial_element_index, trial_fun_index]
-
-        # --- Compute the Derivative of the Test Basis Functions with Respect to z ---
-        # Allocate an array: shape (nshape_test, n_quad_points
-        
-        test_basis_deriv_x = _np.zeros((nshape_test, n_quad_points), dtype=result_type)
-        test_basis_deriv_y = _np.zeros((nshape_test, n_quad_points), dtype=result_type)
-        test_basis_deriv_z = _np.zeros((nshape_test, n_quad_points), dtype=result_type)
-
-        test_basis_deriv = _np.zeros((nshape_test, n_quad_points), dtype=result_type)
-        for test_fun_index in range(nshape_test):
-            for quad_point_index in range(n_quad_points):
-                if quad_point_index == 0:
-                    dx =_np.linalg.norm(test_global_points[0, quad_point_index] - test_global_points[0, quad_point_index + 1])
-                    dy =_np.linalg.norm(test_global_points[1, quad_point_index] - test_global_points[1, quad_point_index + 1])
-                    dz =_np.linalg.norm(test_global_points[2, quad_point_index] - test_global_points[2, quad_point_index + 1])
-                    
-                    if dx == 0:
-                        dx = 1e-10
-                    if dy == 0:
-                        dy = 1e-10
-                    if dz == 0:
-                        dz = 1e-10
-                    
-                    test_basis_deriv_x[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, 0, quad_point_index+1] - test_basis_functions[i, test_fun_index, 0, quad_point_index]) / dx
-                    test_basis_deriv_y[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, 1, quad_point_index+1] - test_basis_functions[i, test_fun_index, 1, quad_point_index]) / dy
-                    test_basis_deriv_z[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, 2, quad_point_index+1] - test_basis_functions[i, test_fun_index, 2, quad_point_index]) / dz
-
-                elif quad_point_index == n_quad_points - 1:
-                    dx =_np.linalg.norm(test_global_points[0, quad_point_index] - test_global_points[0, quad_point_index - 1])
-                    dy =_np.linalg.norm(test_global_points[1, quad_point_index] - test_global_points[1, quad_point_index - 1])
-                    dz =_np.linalg.norm(test_global_points[2, quad_point_index] - test_global_points[2, quad_point_index - 1])
-
-                    if dx == 0:
-                        dx = 1e-10
-                    if dy == 0:
-                        dy = 1e-10
-                    if dz == 0:
-                        dz = 1e-10
-
-                    test_basis_deriv_x[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, 0, quad_point_index] - test_basis_functions[i, test_fun_index, 0, quad_point_index-1]) / dx
-                    test_basis_deriv_y[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, 1, quad_point_index] - test_basis_functions[i, test_fun_index, 1, quad_point_index-1]) / dy
-                    test_basis_deriv_z[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, 2, quad_point_index] - test_basis_functions[i, test_fun_index, 2, quad_point_index-1]) / dz
-
-
-                else:
-                    dx = _np.linalg.norm(test_global_points[0, quad_point_index - 1] - test_global_points[0, quad_point_index + 1])
-                    dy = _np.linalg.norm(test_global_points[1, quad_point_index - 1] - test_global_points[1, quad_point_index + 1])
-                    dz = _np.linalg.norm(test_global_points[2, quad_point_index - 1] - test_global_points[2, quad_point_index + 1])
-
-                    if dx == 0:
-                        dx = 1e-10
-                    if dy == 0:
-                        dy = 1e-10
-                    if dz == 0:
-                        dz = 1e-10
-
-                    test_basis_deriv_x[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, 0, quad_point_index+1] - test_basis_functions[i, test_fun_index, 0, quad_point_index-1]) / dx
-                    test_basis_deriv_y[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, 1, quad_point_index+1] - test_basis_functions[i, test_fun_index, 1, quad_point_index-1]) / dy
-                    test_basis_deriv_z[test_fun_index, quad_point_index] = (test_basis_functions[i, test_fun_index, 2, quad_point_index+1] - test_basis_functions[i, test_fun_index, 2, quad_point_index-1]) / dz
-
-        
-        test_basis_deriv = test_basis_deriv_x + test_basis_deriv_y + test_basis_deriv_z
+       
 
         # --- Assemble the Local Matrix Contribution ---
         # The weak form for each test basis function (with derivative) is:
@@ -2938,9 +2844,9 @@ def thinwire_efield_regular_assembler(
                     continue
                 for trial_fun_index in range(nshape_trial):
                     for quad_point_index in range(n_quad_points):
-                        integrand = ((test_basis_deriv[test_fun_index, quad_point_index] * dLG_int[quad_point_index, trial_element_index, trial_fun_index]) +
-                                     k2 * (test_basis_functions[i, test_fun_index, :, quad_point_index] @ LG_int[quad_point_index, trial_element_index, trial_fun_index]))
-                        local_result[trial_element_index, test_fun_index, trial_fun_index] += integrand * (quad_weights[quad_point_index] * local_test_factor)
+                        integrand = ((test_basis_functions[i, test_fun_index, :, quad_point_index] @ trial_basis_functions[trial_element_index, test_fun_index, :, quad_point_index]) -
+                                     1/ k2 * (test_basis_divergence[i, test_fun_index, quad_point_index] * trial_basis_divergence[trial_element_index, trial_fun_index, quad_point_index]) * kernel_values[trial_element_index * n_quad_points + quad_point_index])
+                        local_result[trial_element_index, test_fun_index, trial_fun_index] += integrand * (quad_weights[quad_point_index] * local_test_factor * factors[trial_element_index * n_quad_points + quad_point_index])
                     
                     # print(f"test_element: {i}, trial_element: {trial_element_index}, test_fun_index: {test_fun_index}, trial_fun_index: {trial_fun_index}, integrand: {integrand}, local_result: {local_result[trial_element_index, test_fun_index, :]}")
                     
@@ -2955,7 +2861,7 @@ def thinwire_efield_regular_assembler(
                     result[
                                     test_global_dofs[test_element, test_fun_index],
                                     trial_global_dofs[trial_element, trial_fun_index],
-                    ] += (
+                    ] += M_INV_4PI * (
                                     local_result[
                                         trial_element_index, test_fun_index, trial_fun_index
                                     ]

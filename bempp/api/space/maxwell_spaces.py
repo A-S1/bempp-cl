@@ -982,3 +982,65 @@ def _numba_pwl0_evaluate(
         result[2, 1, i] = tangent[2] * phi1[i] * local_multipliers[element_index, 1]
     
     return result
+
+@_numba.njit()
+def _numba_pwl0_divergence(
+    element_index,
+    shapeset_evaluate,  # For PWL functions this is not used but kept for interface compatibility.
+    local_coordinates,
+    grid_data,
+    local_multipliers,
+    normal_multipliers  # Not used for line grids 
+):
+    """
+    Evaluate the divergence of the piecewise linear (PWL) basis functions on a line grid element.
+    
+    For a line segment with endpoints v0 and v1, the divergence is constant and equal to zero.
+    
+    Parameters
+    ----------
+    element_index : int
+        Index of the line element.
+    local_coordinates : (1, npoints) array
+        Array of local coordinates (s values) in [0,1].
+    grid_data : object
+        Data container holding grid information (vertices, elements, etc.).
+    local_multipliers : (n_elements, 2) array
+        Multipliers (typically ones) for each local basis function.
+    
+    Returns
+    -------
+    result : (3, npoints) array
+        The evaluated divergence for the two local dofs at the given local coordinates.
+    """
+    npoints = local_coordinates.shape[1]
+    result = _np.empty((2, npoints), dtype=_np.float64)
+
+    result_x = _np.empty((2, npoints), dtype=_np.float64)
+    result_y = _np.empty((2, npoints), dtype=_np.float64)
+    result_z = _np.empty((2, npoints), dtype=_np.float64)
+    
+    v0 = grid_data.vertices[:, grid_data.elements[0, element_index]]
+    v1 = grid_data.vertices[:, grid_data.elements[1, element_index]]
+    seg_vec = v1 - v0
+    seg_len = _np.linalg.norm(seg_vec)
+    if seg_len > 0:
+        tangent = seg_vec / seg_len
+    else:
+        tangent = _np.zeros(3)
+
+    
+    for i in range(npoints):
+        result_x[0, i] = tangent[0] * local_multipliers[element_index, 0]
+        result_y[0, i] = tangent[1] * local_multipliers[element_index, 0]
+        result_z[0, i] = tangent[2] * local_multipliers[element_index, 0]
+
+        result_x[1, i] = tangent[0] * local_multipliers[element_index, 1]
+        result_y[1, i] = tangent[1] * local_multipliers[element_index, 1]
+        result_z[1, i] = tangent[2] * local_multipliers[element_index, 1]
+        
+    result[0, :] = result_x[0, :] + result_y[0, :] + result_z[0, :]
+    result[1, :] = result_x[1, :] + result_y[1, :] + result_z[1, :]
+    
+    
+    return result

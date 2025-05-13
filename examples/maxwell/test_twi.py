@@ -7,7 +7,7 @@ k = 2 * np.pi / wavelength
 
 # grid_surface = bempp.api.import_grid("examples/maxwell/plane2.msh")
 
-grid = bempp.api.import_grid("examples/maxwell/line_mesh.msh")
+grid = bempp.api.import_grid("examples/maxwell/line_mesh_L.msh")
 # grid.plot()
 
 if hasattr(grid, 'line_mask'):
@@ -34,8 +34,8 @@ class _DenseAssembly(object):
 
 parameters = SimpleNamespace()
 parameters.quadrature = SimpleNamespace()
-parameters.quadrature.regular = 8
-parameters.quadrature.singular = 8
+parameters.quadrature.regular = 30
+parameters.quadrature.singular = 30
 
 parameters.assembly = SimpleNamespace()
 parameters.assembly.dense = _DenseAssembly()
@@ -58,10 +58,20 @@ parameters.fmm.dense_evaluation = False
 
 
 
+
 space = bempp.api.function_space(grid, "PWL", 0)
+
+elec = bempp.api.operators.boundary.maxwell.electric_field(space, space, space, k, parameters=parameters)
+mat = elec.weak_form().to_dense()
+mat_norm_ref = np.linalg.norm(mat)
+
+
+
 
 testing_quad_order = np.arange(3, 30, 1)
 norm_list = []
+
+error_list = []
 
 for order in testing_quad_order:
     parameters.quadrature.singular = order
@@ -72,13 +82,28 @@ for order in testing_quad_order:
     mat_norm = np.linalg.norm(mat)
     norm_list.append(mat_norm)
 
+    error = np.abs(mat_norm - mat_norm_ref)
+    error_list.append(error)
+
 
 plt.plot(testing_quad_order, norm_list)
 plt.xlabel("Quadrature Order")
 plt.ylabel("Matrix Norm")
 plt.title("Matrix Norm vs Quadrature Order")
+
+plt.figure()
+plt.plot(testing_quad_order, error_list)
+plt.xlabel("Quadrature Order")
+plt.ylabel("Error")
+plt.title("Error vs Quadrature Order")
 plt.yscale("log")
+plt.grid()
+plt.tight_layout()
+
+
 plt.show()
+
+
 
 # elec_surface = bempp.api.operators.boundary.maxwell.electric_field(spce_surface_domain, spce_surface_domain, spce_surface_range, k)
 
