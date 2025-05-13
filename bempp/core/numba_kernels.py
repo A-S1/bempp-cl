@@ -150,8 +150,8 @@ def get_line_transform(grid_data, elements, local_points, local_multipliers):
             tangent = _np.zeros(3, dtype=_np.float64)
 
         # apply local multipliers to the scalars
-        m0 = local_multipliers[e_i, 0]
-        m1 = local_multipliers[e_i, 1]
+        m0 = 1 / local_multipliers[e_i, 0]
+        m1 = 1 / local_multipliers[e_i, 1]
         
         for qp in range(npoints):
             phi0 = (1.0 - s[qp]) * m0
@@ -192,8 +192,8 @@ def get_divergence_line(grid_data, elements, local_points, local_multipliers):
         else:
             tangent = _np.zeros(3, dtype=_np.float64)
 
-        m0 = local_multipliers[element_index, 0]
-        m1 = local_multipliers[element_index, 1]
+        m0 = 1 / local_multipliers[element_index, 0]
+        m1 = 1 / local_multipliers[element_index, 1]
 
         for qp in range(npoints):
         

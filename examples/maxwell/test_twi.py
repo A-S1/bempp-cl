@@ -7,7 +7,7 @@ k = 2 * np.pi / wavelength
 
 # grid_surface = bempp.api.import_grid("examples/maxwell/plane2.msh")
 
-grid = bempp.api.import_grid("examples/maxwell/line_mesh_L.msh")
+grid = bempp.api.import_grid("examples/maxwell/line_mesh.msh")
 # grid.plot()
 
 if hasattr(grid, 'line_mask'):
@@ -82,7 +82,7 @@ for order in testing_quad_order:
     mat_norm = np.linalg.norm(mat)
     norm_list.append(mat_norm)
 
-    error = np.abs(mat_norm - mat_norm_ref)
+    error = np.abs(mat_norm - mat_norm_ref)/mat_norm_ref
     error_list.append(error)
 
 
