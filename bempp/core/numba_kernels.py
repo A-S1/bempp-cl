@@ -173,7 +173,7 @@ def get_line_transform(grid_data, elements, local_points, local_multipliers):
 )
 def get_divergence_line(grid_data, elements, local_points, local_multipliers):
     """Compute the divergence of the line elements."""
-    npoints = local_points.shape[1]
+    npoints = local_points.shape[-1]
     nelements = len(elements)
     result = _np.zeros((nelements, 2, npoints), dtype=local_points.dtype)
 
