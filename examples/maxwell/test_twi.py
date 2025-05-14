@@ -7,7 +7,7 @@ k = 2 * np.pi / wavelength
 
 # grid_surface = bempp.api.import_grid("examples/maxwell/plane2.msh")
 
-grid = bempp.api.import_grid("examples/maxwell/line_mesh.msh")
+grid = bempp.api.import_grid("examples/maxwell/line_mesh_rotated.msh")
 # grid.plot()
 
 if hasattr(grid, 'line_mask'):

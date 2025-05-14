@@ -89,30 +89,30 @@ def assemble_dense(
 
     grids_identical = domain.grid == dual_to_range.grid
 
-    # if grids_identical:
+    if grids_identical:
 
-    #     trial_local2global = domain.local2global.ravel()
-    #     test_local2global = dual_to_range.local2global.ravel()
-    #     trial_multipliers = domain.local_multipliers.ravel()
-    #     test_multipliers = dual_to_range.local_multipliers.ravel()
+        trial_local2global = domain.local2global.ravel()
+        test_local2global = dual_to_range.local2global.ravel()
+        trial_multipliers = domain.local_multipliers.ravel()
+        test_multipliers = dual_to_range.local_multipliers.ravel()
 
-    #     singular_rows, singular_cols, singular_values = assemble_singular_part(
-    #         domain.localised_space,
-    #         dual_to_range.localised_space,
-    #         parameters,
-    #         operator_descriptor,
-    #         device_interface,
-    #     )
+        singular_rows, singular_cols, singular_values = assemble_singular_part(
+            domain.localised_space,
+            dual_to_range.localised_space,
+            parameters,
+            operator_descriptor,
+            device_interface,
+        )
 
-    #     rows = test_local2global[singular_rows]
-    #     cols = trial_local2global[singular_cols]
-    #     values = (
-    #         singular_values
-    #         * trial_multipliers[singular_cols]
-    #         * test_multipliers[singular_rows]
-    #     )
+        rows = test_local2global[singular_rows]
+        cols = trial_local2global[singular_cols]
+        values = (
+            singular_values
+            * trial_multipliers[singular_cols]
+            * test_multipliers[singular_rows]
+        )
 
-    #     _np.add.at(result, (rows, cols), values)
+        _np.add.at(result, (rows, cols), values)
 
     return result
 
