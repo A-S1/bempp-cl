@@ -2845,11 +2845,11 @@ def thinwire_efield_regular_assembler(
                     for trial_fun_index in range(nshape_trial):
                         for quad_point_index in range(n_quad_points):
                             integrand = ((test_basis_functions[i, test_fun_index, :, test_point_index] @ trial_basis_functions[trial_element_index, test_fun_index, :, quad_point_index]) -
-                                        1/ k2 * (test_basis_divergence[i, test_fun_index, test_point_index] * trial_basis_divergence[trial_element_index, trial_fun_index, quad_point_index]) * kernel_values[trial_element_index * n_quad_points + quad_point_index])
+                                        1/ k2 * (test_basis_divergence[i, test_fun_index, test_point_index] * trial_basis_divergence[trial_element_index, trial_fun_index, quad_point_index])) * kernel_values[trial_element_index * n_quad_points + quad_point_index]
                             local_result[trial_element_index, test_fun_index, trial_fun_index] += integrand * (quad_weights[test_point_index] * local_test_factor * factors[trial_element_index * n_quad_points + quad_point_index])
-                    
-                    # print(f"test_element: {i}, trial_element: {trial_element_index}, test_fun_index: {test_fun_index}, trial_fun_index: {trial_fun_index}, integrand: {integrand}, local_result: {local_result[trial_element_index, test_fun_index, :]}")
-                    
+
+
+                       
 
         # --- Accumulate the Local Results into the Global Matrix ---
         # The global result array is assembled such that the block
@@ -2858,6 +2858,7 @@ def thinwire_efield_regular_assembler(
             trial_element = trial_elements[trial_element_index]
             for test_fun_index in range(nshape_test):
                 for trial_fun_index in range(nshape_trial):
+                    print(f"test_element: {i}, trial_element: {trial_element_index}, test_fun_index: {test_fun_index}, trial_fun_index: {trial_fun_index}, local_result: {local_result[trial_element_index, test_fun_index, trial_fun_index]}")
                     result[
                                     test_global_dofs[test_element, test_fun_index],
                                     trial_global_dofs[trial_element, trial_fun_index],
