@@ -2858,7 +2858,7 @@ def thinwire_efield_regular_assembler(
             trial_element = trial_elements[trial_element_index]
             for test_fun_index in range(nshape_test):
                 for trial_fun_index in range(nshape_trial):
-                    print(f"test_element: {i}, trial_element: {trial_element_index}, test_fun_index: {test_fun_index}, trial_fun_index: {trial_fun_index}, local_result: {local_result[trial_element_index, test_fun_index, trial_fun_index]}")
+                    # print(f"test_element: {i}, trial_element: {trial_element_index}, test_fun_index: {test_fun_index}, trial_fun_index: {trial_fun_index}, local_result: {local_result[trial_element_index, test_fun_index, trial_fun_index]}")
                     result[
                                     test_global_dofs[test_element, test_fun_index],
                                     trial_global_dofs[trial_element, trial_fun_index],
