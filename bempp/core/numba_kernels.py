@@ -2798,10 +2798,7 @@ def thinwire_efield_regular_assembler(
         local_test_factor = test_edge_lengths[i]
 
         # --- Compute the Inner Integral: G(z) = int_L g(z,z') phi(z') dz' for each test quadrature point ---
-        # Allocate an array to hold the computed inner integral for each test quadrature point,
-        # for all trial elements and for each trial basis function.
-        # Shape: (n_quad_points, n_trial_elements, nshape_trial)
-        LG_int = _np.zeros((n_quad_points, n_trial_elements, nshape_trial, 3), dtype=result_type)
+        
         test_radius = wire_radius[i]
 
         is_adjacent = _np.zeros(n_trial_elements, dtype=_np.bool_)
@@ -2844,7 +2841,7 @@ def thinwire_efield_regular_assembler(
                     #     continue
                     for trial_fun_index in range(nshape_trial):
                         for quad_point_index in range(n_quad_points):
-                            integrand = ((test_basis_functions[i, test_fun_index, :, test_point_index] @ trial_basis_functions[trial_element_index, test_fun_index, :, quad_point_index]) -
+                            integrand = ((test_basis_functions[i, test_fun_index, :, test_point_index] @ trial_basis_functions[trial_element_index, trial_fun_index, :, quad_point_index]) -
                                         1/ k2 * (test_basis_divergence[i, test_fun_index, test_point_index] * trial_basis_divergence[trial_element_index, trial_fun_index, quad_point_index])) * kernel_values[trial_element_index * n_quad_points + quad_point_index]
                             local_result[trial_element_index, test_fun_index, trial_fun_index] += integrand * (quad_weights[test_point_index] * local_test_factor * factors[trial_element_index * n_quad_points + quad_point_index])
 
