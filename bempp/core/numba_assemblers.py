@@ -127,18 +127,18 @@ def dense_assembler(
         numba_kernel_function_regular,
     ) = select_numba_kernels(operator_descriptor, mode="regular")
 
-    print(f"Using {numba_assembly_function_regular} assembler and {numba_kernel_function_regular} kernel function.")
+    # print(f"Using {numba_assembly_function_regular} assembler and {numba_kernel_function_regular} kernel function.")
 
     order = parameters.quadrature.regular
 
     if "line" in domain.grid.type.lower():
         # Use line quadrature rule
-        print("Using line quadrature rule")
+        # print("Using line quadrature rule")
         quad_points, quad_weights = line_rule(order)
         
     elif "triangle" in domain.grid.type.lower():
         # Use triangle quadrature rule
-        print("Using triangle quadrature rule")
+        # print("Using triangle quadrature rule")
         quad_points, quad_weights = rule(order)
 
     # Perform Numba assembly always in double precision
@@ -188,7 +188,7 @@ def dense_assembler(
             domain.shapeset.evaluate,
             result,
         )
-    print("Dense assembler completed.")
+    # print("Dense assembler completed.")
 
 def potential_assembler(
     device_interface, space, operator_descriptor, points, parameters
