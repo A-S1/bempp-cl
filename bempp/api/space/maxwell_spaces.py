@@ -427,9 +427,9 @@ def pwl0_function_space(
     hat function is multiplied by the element’s tangent vector.
     """
     from .space import SpaceBuilder, _process_segments
-    # Process segments—here we simply pass through (for a line grid the support
+    # Process segments—h pass through (for a line grid the support
     # will be all vertices) and any normal multipliers (which could be used to
-    # enforce an orientation, though typically they are ones).
+    # enforce an orientation, but here are ones).
     support, normal_multipliers = _process_segments(grid, support_elements, segments, swapped_normals)
     
     # Compute the mapping and multipliers specific for line grids.
