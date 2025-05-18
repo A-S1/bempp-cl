@@ -434,7 +434,7 @@ def pwl0_function_space(
     
     # Compute the mapping and multipliers specific for line grids.
     global_dof_count, support, local2global, local_multipliers = _compute_pwl0_space_data(grid)
-    print("normal_multipliers", normal_multipliers)
+    print("local_multipliers", local_multipliers)
     
     return (
         SpaceBuilder(grid)
