@@ -7,7 +7,7 @@ k = 2 * np.pi / wavelength
 
 # grid_surface = bempp.api.import_grid("examples/maxwell/plane2.msh")
 
-grid = bempp.api.import_grid("examples/maxwell/line_mesh.msh")
+grid = bempp.api.import_grid("examples/maxwell/line_mesh_L.msh")
 
 grid2 = bempp.api.import_grid("examples/maxwell/line_mesh_rotated.msh")
 # grid.plot()
@@ -69,9 +69,9 @@ elec2 = bempp.api.operators.boundary.maxwell.electric_field(space2, space2, spac
 mat = elec.weak_form().to_dense()
 mat2 = elec2.weak_form().to_dense()
 
-print("difference between matrices =", mat - mat2)
-print("difference between matrices norm =", np.linalg.norm(mat - mat2))
-print("difference between matrices norm (2) =", np.linalg.norm(mat - mat2, ord=2))
+# print("difference between matrices =", mat - mat2)
+# print("difference between matrices norm =", np.linalg.norm(mat - mat2))
+# print("difference between matrices norm (2) =", np.linalg.norm(mat - mat2, ord=2))
 
 mat_norm_ref = np.linalg.norm(mat)
 
