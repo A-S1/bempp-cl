@@ -92,7 +92,7 @@ for order in testing_quad_order:
     mat_norm = np.linalg.norm(mat)
     norm_list.append(mat_norm)
 
-    error = np.abs(mat_norm - mat_norm_ref)/mat_norm_ref
+    error = np.abs(mat_norm - mat_norm_ref)
     error_list.append(error)
 
 

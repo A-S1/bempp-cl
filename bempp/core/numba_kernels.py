@@ -150,8 +150,11 @@ def get_line_transform(grid_data, elements, local_points, local_multipliers):
             tangent = _np.zeros(3, dtype=_np.float64)
 
         # apply local multipliers to the scalars
+        print("local multipliers", local_multipliers[e_i, 0], local_multipliers[e_i, 1])
+        
         m0 = 1 / local_multipliers[e_i, 0]
         m1 = 1 / local_multipliers[e_i, 1]
+
         
         for qp in range(npoints):
             phi0 = (1.0 - s[qp]) * m0
