@@ -2898,7 +2898,7 @@ def thinwire_efield_singular(
     
 
     nelements = len(test_elements)
-    print(f"nelements: {nelements}")
+    
 
     test_edge_lengths = get_edge_lengths_line(grid_data, test_elements)
     trial_edge_lengths = get_edge_lengths_line(grid_data, trial_elements)
