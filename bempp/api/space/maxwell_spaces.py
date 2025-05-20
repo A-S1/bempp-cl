@@ -463,7 +463,7 @@ def _compute_pwl0_space_data(grid):
     global_dof_count = grid.number_of_vertices  # Number of DOFs (one per vertex)
     local2global = grid.elements[0:2, :].T.copy()  # Shape: (number_of_elements, 2)
     local_multipliers = _np.ones((grid.number_of_elements, 2), dtype=_np.float64)
-    edge_lengths = grid.edge_lengths
+    edge_lengths = grid.diameters
     
     for e in range(grid.number_of_elements):
         local_multipliers[e, 0] = edge_lengths[e]
