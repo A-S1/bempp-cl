@@ -435,7 +435,6 @@ def pwl0_function_space(
     # Compute the mapping and multipliers specific for line grids.
     global_dof_count, support, local2global, local_multipliers = _compute_pwl0_space_data(grid)
 
-    print("pwl0 lm", local_multipliers)
     
     return (
         SpaceBuilder(grid)
@@ -471,7 +470,7 @@ def _compute_pwl0_space_data(grid):
         
     # Here, support must be of length grid.number_of_elements!
     support = _np.ones(grid.number_of_elements, dtype=bool)
-    print("local multipliers", local_multipliers)
+
     return global_dof_count, support, local2global, local_multipliers
 
 def pwl0_barycentric_function_space(coarse_space):

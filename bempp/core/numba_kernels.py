@@ -157,7 +157,7 @@ def get_line_transform(grid_data, elements, local_points, local_multipliers):
 
         
         for qp in range(npoints):
-            phi0 = (1.0 - s[qp]) * m0
+            phi0 = (1 / m0 - s[qp]) * m0
             phi1 = s[qp]         * m1
             # fill the vector basis functions
             result[e_i, 0, 0, qp] = tangent[0] * phi0
