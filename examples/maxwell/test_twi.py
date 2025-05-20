@@ -7,7 +7,7 @@ k = 2 * np.pi / wavelength
 
 # grid_surface = bempp.api.import_grid("examples/maxwell/plane2.msh")
 
-grid = bempp.api.import_grid("examples/maxwell/line_mesh_L.msh")
+grid = bempp.api.import_grid("examples/maxwell/line_mesh.msh")
 
 grid2 = bempp.api.import_grid("examples/maxwell/line_mesh_rotated.msh")
 # grid.plot()
@@ -36,7 +36,7 @@ class _DenseAssembly(object):
 
 parameters = SimpleNamespace()
 parameters.quadrature = SimpleNamespace()
-parameters.quadrature.regular = 30
+parameters.quadrature.regular = 6
 parameters.quadrature.singular = 30
 
 parameters.assembly = SimpleNamespace()
@@ -85,7 +85,7 @@ error_list = []
 
 for order in testing_quad_order:
     parameters.quadrature.singular = order
-    parameters.quadrature.regular = order
+    parameters.quadrature.regular = 6
 
     elec = bempp.api.operators.boundary.maxwell.electric_field(space, space, space, k, parameters=parameters)
     mat = elec.weak_form().to_dense()

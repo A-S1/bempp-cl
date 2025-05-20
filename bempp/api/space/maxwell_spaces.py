@@ -431,9 +431,11 @@ def pwl0_function_space(
     # will be all vertices) and any normal multipliers (which could be used to
     # enforce an orientation, but here are ones).
     support, normal_multipliers = _process_segments(grid, support_elements, segments, swapped_normals)
-    
+  
     # Compute the mapping and multipliers specific for line grids.
     global_dof_count, support, local2global, local_multipliers = _compute_pwl0_space_data(grid)
+
+    print("pwl0 lm", local_multipliers)
     
     return (
         SpaceBuilder(grid)
@@ -462,7 +464,7 @@ def _compute_pwl0_space_data(grid):
     local2global = grid.elements[0:2, :].T.copy()  # Shape: (number_of_elements, 2)
     local_multipliers = _np.ones((grid.number_of_elements, 2), dtype=_np.float64)
     edge_lengths = grid.edge_lengths
-    print("edge_lengths", edge_lengths)
+    
     for e in range(grid.number_of_elements):
         local_multipliers[e, 0] = edge_lengths[e]
         local_multipliers[e, 1] = edge_lengths[e]
@@ -721,21 +723,6 @@ def _compute_rwg0_space_data(
 
     return dof_count, support, local2global_map, local_multipliers
 
-def _compute_pwl0_space_data(grid):
-    """
-    Compute the local-to-global mapping for piecewise linear functions on a line grid.
-    
-    In a line grid, the degrees of freedom are associated with the vertices.
-    Each segment (element) has two local dofs given by its endpoints.
-    """
-    global_dof_count = grid.number_of_vertices
-    # For each element, the local dofs are simply the two vertex indices.
-    local2global = grid.elements[0:2, :].T.copy()  # shape (n_elements, 2)
-    # Set local multipliers to ones (they may be used for sign conventions).
-    local_multipliers = _np.ones((grid.number_of_elements, 2), dtype=_np.float64)
-    # All vertices are considered to be in the support.
-    support = _np.ones(grid.number_of_elements, dtype=_np.bool_)
-    return global_dof_count, support, local2global, local_multipliers
 
 @_numba.njit(cache=True)
 def generate_rwg0_map(grid_data, support_elements, local_coords, coeffs):
