@@ -2976,7 +2976,7 @@ def thinwire_efield_singular(
         for test_fun_index in range(nshape_test):
             for trial_fun_index in range(nshape_trial):
                 local_result = 0.0 + 0.0j
-                sign = sign_matrix[index, test_fun_index, trial_fun_index]
+                sign = sign_matrix[ test_fun_index, trial_fun_index]
                 for test_point_index in range(npoints):
                     S1  = 1 / test_normal * ( _np.sqrt(wire_radius**2 +
                             (test_global_points[:,test_point_index] - test_normal)**2) - _np.sqrt(wire_radius**2 + test_global_points[:,test_point_index]**2) ) + test_global_points[:,test_point_index] / test_normal * _np.log( (test_global_points[:,test_point_index] + _np.sqrt( wire_radius**2 + test_global_points[:,test_point_index] **2 )) / (test_global_points[:,test_point_index] - test_normal + _np.sqrt( wire_radius**2 + (test_global_points[:,test_point_index] - test_normal)**2 )) ) - 1j * wavenumber * test_normal / 2
