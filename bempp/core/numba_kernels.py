@@ -201,8 +201,8 @@ def get_divergence_line(grid_data, elements, local_points, local_multipliers):
         for qp in range(npoints):
         
             # fill the vector basis functions
-            result[element_index, 0, qp] = _np.linalg.norm(tangent * m0, 1)
-            result[element_index, 1, qp] = _np.linalg.norm(tangent * m1, 1)
+            result[element_index, 0, qp]  = -1*_np.sum(tangent * m0)
+            result[element_index, 1, qp] = _np.sum(tangent * m1)
      
     return result
 
@@ -2933,6 +2933,7 @@ def thinwire_efield_singular(
             _np.array([[1, 1]]),
         )[0]
 
+        
         test_fun_values = _np.zeros((2, npoints), dtype=test_fun_vec_values.dtype)
 
         for j in range(npoints):
@@ -2940,11 +2941,21 @@ def thinwire_efield_singular(
             test_fun_values[1, j] = _np.linalg.norm(test_fun_vec_values[:,1, j])
 
 
-        # here compute the subsegments of the test element between two quadrature points
-        # then compute the value of the hatfunction at that point 
+        test_div = get_divergence_line(
+            grid_data,
+            [test_element],
+            test_points[test_offset : test_offset + npoints],
+            _np.array([[1, 1]]),
+        )[0]
 
 
-        sign = 1.0 if test_normal_multipliers[index] * trial_normal_multipliers[index] > 0 else -1.0
+        sign_matrix = _np.empty((nshape_test, nshape_trial), dtype=_np.int8)
+
+        
+        for i in range(nshape_test):
+            for j in range(nshape_trial):
+                sign_matrix[i, j] = 1 if (test_div[i]
+                                            @ test_div[j]> 0) else -1
 
         # evaluate kernel on quadrature points
         S = kernel_evaluator(
@@ -2964,10 +2975,11 @@ def thinwire_efield_singular(
 
         for test_fun_index in range(nshape_test):
             for trial_fun_index in range(nshape_trial):
-                local_result = 0.0
+                local_result = 0.0 + 0.0j
+                sign = sign_matrix[index, test_fun_index, trial_fun_index]
                 for test_point_index in range(npoints):
                     S1  = 1 / test_normal * ( _np.sqrt(wire_radius**2 +
-                            (test_global_points[:,test_point_index] - test_normal)**2) - _np.sqrt(wire_radius**2 + test_global_points[:,test_point_index]**2) ) + test_global_points[:,test_point_index] / test_normal * _np.log( (test_global_points[:,test_point_index] + _np.sqrt( wire_radius**2 + test_global_points[:,test_point_index] **2 )) / (test_global_points[:,test_point_index] - test_normal + _np.sqrt( wire_radius**2 + (test_global_points[:,test_point_index] - test_normal)**2 )) ) - 1j * wavenumber * test_normal
+                            (test_global_points[:,test_point_index] - test_normal)**2) - _np.sqrt(wire_radius**2 + test_global_points[:,test_point_index]**2) ) + test_global_points[:,test_point_index] / test_normal * _np.log( (test_global_points[:,test_point_index] + _np.sqrt( wire_radius**2 + test_global_points[:,test_point_index] **2 )) / (test_global_points[:,test_point_index] - test_normal + _np.sqrt( wire_radius**2 + (test_global_points[:,test_point_index] - test_normal)**2 )) ) - 1j * wavenumber * test_normal / 2
                     S2 = 1 / test_normal**2 * _np.log( (test_global_points[:,test_point_index] + _np.sqrt( wire_radius**2 + test_global_points[:,test_point_index] **2 )) / (test_global_points[:,test_point_index] - test_normal + _np.sqrt( wire_radius**2 + (test_global_points[:,test_point_index]- test_normal)**2 )) - 1j * wavenumber * test_normal) 
                     local_result += quad_weights[weights_offset + test_point_index] * (test_fun_values[test_fun_index, test_point_index] * S1 - sign * inv_k2 * S2)   
 
