@@ -74,7 +74,8 @@ corners3 = np.array([[-1, -1, -1], [1, -1, -1], [1, 1, -1], [-1, 1, -1]])
 
 wire_1 = np.array([[-0.5, -1, 0], [-0.5, 1, 1]])
 
-grid1 = bempp.api.shapes.screen(corners1)
+grid1 = bempp.api.shapes.screen(corners1, h=2)
+# grid1.plot()
 grid2 = bempp.api.shapes.screen(corners2)
 grid3 = bempp.api.shapes.screen(corners3)
 
@@ -85,12 +86,13 @@ grid5 = bempp.api.grid.union([grid, grid4])
 
 # We define the spaces of order 0 RWG div-conforming functions and order 0 scaled N&eacute;d&eacute;lec curl-conforming functions.
 
-div_space = bempp.api.function_space(grid, "RWG", 0)
-curl_space = bempp.api.function_space(grid, "SNC", 0)
+div_space = bempp.api.function_space(grid1, "RWG", 0)
+curl_space = bempp.api.function_space(grid1, "SNC", 0)
 
 # Next, we define the Maxwell electric field boundary operator and the identity operator. For Maxwell problems, the ``domain`` and ``range`` spaces should be div-conforming, while the ``dual_to_range`` space should be curl conforming.
 
 elec = bempp.api.operators.boundary.maxwell.electric_field(div_space, div_space, curl_space, k)
+mat = elec.weak_form()
 identity = bempp.api.operators.boundary.sparse.identity(div_space, div_space, curl_space)
 
 # We create a grid function to represent the incident wave. In addition, we define a Python callable with the incident field, which is later used for plotting.

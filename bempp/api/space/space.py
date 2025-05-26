@@ -39,6 +39,8 @@ def function_space(grid, kind, degree, scatter=True, **kwargs):
 
     space_f = None
 
+    print("Creating space of type", kind, "with degree", degree)
+
     if "support_elements" in kwargs and "segments" in kwargs:
         raise ValueError(
             "Only one of 'support_elements' and 'segments' must be nonzero."

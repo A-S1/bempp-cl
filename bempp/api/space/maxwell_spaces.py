@@ -957,17 +957,17 @@ def _numba_pwl0_evaluate(
     
     s = local_coordinates[0, :]
     
-    phi0 = 1.0 - s
+    phi0 = local_multipliers[element_index, 0] - s
     phi1 = s
     
     for i in range(npoints):
-        result[0, 0, i] = tangent[0] * phi0[i] * local_multipliers[element_index, 0]
-        result[1, 0, i] = tangent[1] * phi0[i] * local_multipliers[element_index, 0]
-        result[2, 0, i] = tangent[2] * phi0[i] * local_multipliers[element_index, 0]
+        result[0, 0, i] = tangent[0] * phi0[i] / local_multipliers[element_index, 0]
+        result[1, 0, i] = tangent[1] * phi0[i] / local_multipliers[element_index, 0]
+        result[2, 0, i] = tangent[2] * phi0[i] / local_multipliers[element_index, 0]
         
-        result[0, 1, i] = tangent[0] * phi1[i] * local_multipliers[element_index, 1]
-        result[1, 1, i] = tangent[1] * phi1[i] * local_multipliers[element_index, 1]
-        result[2, 1, i] = tangent[2] * phi1[i] * local_multipliers[element_index, 1]
+        result[0, 1, i] = tangent[0] * phi1[i] / local_multipliers[element_index, 1]
+        result[1, 1, i] = tangent[1] * phi1[i] / local_multipliers[element_index, 1]
+        result[2, 1, i] = tangent[2] * phi1[i] / local_multipliers[element_index, 1]
     
     return result
 
