@@ -168,3 +168,4 @@ class _SumPotentialOperator(PotentialOperator):
     def evaluation_points(self):
         """Return the evaluation points."""
         return self._op1.points
+

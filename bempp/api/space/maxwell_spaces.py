@@ -452,26 +452,57 @@ def pwl0_function_space(
         .build()
     )
 
-def _compute_pwl0_space_data(grid):
+def _compute_pwl0_space_data(
+        grid, 
+        include_boundary_dofs: bool = False
+):
     """
     Compute the local-to-global mapping for piecewise linear functions on a line grid.
     
     In a line grid, the degrees of freedom are associated with the vertices (global_dof_count),
     but the local mapping (local2global and local multipliers) is defined per element (segment).
     """
-    global_dof_count = grid.number_of_vertices  # Number of DOFs (one per vertex)
-    local2global = grid.elements[0:2, :].T.copy()  # Shape: (number_of_elements, 2)
-    local_multipliers = _np.ones((grid.number_of_elements, 2), dtype=_np.float64)
-    edge_lengths = grid.diameters
-    
-    for e in range(grid.number_of_elements):
-        local_multipliers[e, 0] = edge_lengths[e]
-        local_multipliers[e, 1] = edge_lengths[e]
-        
-    # Here, support must be of length grid.number_of_elements!
-    support = _np.ones(grid.number_of_elements, dtype=bool)
 
-    return global_dof_count, support, local2global, local_multipliers
+    #return global_dof_count, support, local2global, local_multipliers
+    number_of_vertices = grid.number_of_vertices
+    number_of_elements = grid.number_of_elements
+
+    # 1) Count how many segments meet at each vertex
+    valence = _np.zeros(number_of_vertices, dtype=int)
+    # grid.elements.shape == (2, nE)
+    for v in grid.elements[0]:
+        valence[v] += 1
+    for v in grid.elements[1]:
+        valence[v] += 1
+
+    # 2) Which vertices will carry DOFs?
+    has_dof = valence > 1    # only interiors
+    if include_boundary_dofs:
+        has_dof[valence == 1] = True
+
+    # 3) Give each such vertex a global DOF index
+    vertex2dof = -_np.ones(number_of_vertices, dtype=int)
+    dof_count = 0
+    for v in range(number_of_vertices):
+        if has_dof[v]:
+            vertex2dof[v] = dof_count
+            dof_count += 1
+
+    # 4) Build local2global: for each segment, look up its two endpoint DOFs
+    local2global = _np.empty((number_of_elements, 2), dtype=int)
+    for e in range(number_of_elements):
+        v0, v1 = grid.elements[:, e]
+        local2global[e, 0] = vertex2dof[v0]
+        local2global[e, 1] = vertex2dof[v1]
+
+    # 5) A segment is “supported” if it has at least one valid local DOF
+    support = _np.any(local2global >= 0, axis=1)
+
+    # 6) Local multipliers = edge lengths (you could also normalize if desired)
+    edge_lengths = grid.diameters  # shape (nE,)
+    local_multipliers = _np.vstack([edge_lengths, edge_lengths]).T
+
+    return dof_count, support, local2global, local_multipliers
 
 def pwl0_barycentric_function_space(coarse_space):
     """
