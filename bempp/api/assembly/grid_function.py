@@ -268,6 +268,7 @@ class GridFunction(object):
             
             elif "line" in comp_domain.grid.type.lower():
                 points, weights = line_rule(self._parameters.quadrature.regular)
+                points = points.T
 
             if function_parameters is None:
                 function_parameters = _np.array([], dtype="float64")
