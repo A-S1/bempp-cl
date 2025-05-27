@@ -835,14 +835,21 @@ def _project_function(
             local_multipliers,
             normal_multipliers,
         )
+        if "triangle" in grid_data.type.lower():
+            for j in range(3):
+                global_points[j] = (
+                    (1.0 - points[0] - points[1])
+                    * grid_data.vertices[j, grid_data.elements[0, index]]
+                    + points[0] * grid_data.vertices[j, grid_data.elements[1, index]]
+                    + points[1] * grid_data.vertices[j, grid_data.elements[2, index]]
+                )
 
-        for j in range(3):
-            global_points[j] = (
-                (1.0 - points[0] - points[1])
-                * grid_data.vertices[j, grid_data.elements[0, index]]
-                + points[0] * grid_data.vertices[j, grid_data.elements[1, index]]
-                + points[1] * grid_data.vertices[j, grid_data.elements[2, index]]
-            )
+        elif "line" in grid_data.type.lower():
+            for j in range(2):
+                global_points[j] = (
+                    (1.0 - points[0]) * grid_data.vertices[j, grid_data.elements[0, index]]
+                    + points[0] * grid_data.vertices[j, grid_data.elements[1, index]]
+                )
 
         for j in range(npoints):
             point = global_points[:, j]
