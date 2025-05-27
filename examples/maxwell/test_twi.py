@@ -7,7 +7,7 @@ k = 2 * np.pi / wavelength
 
 # grid_surface = bempp.api.import_grid("examples/maxwell/plane2.msh")
 
-grid = bempp.api.import_grid("examples/maxwell/line_mesh.msh")
+grid = bempp.api.import_grid("examples/maxwell/line_mesh_L.msh")
 
 grid2 = bempp.api.import_grid("examples/maxwell/line_mesh_rotated.msh")
 # grid.plot()
@@ -63,6 +63,13 @@ parameters.fmm.dense_evaluation = False
 
 space = bempp.api.function_space(grid, "PWL", 0)
 space2 = bempp.api.function_space(grid2, "PWL", 0)
+
+@bempp.api.complex_callable
+def fun(x, n, domain_index, result):
+    """Incident field function."""
+    result[:] = np.array([np.exp(1j * k * x[2]), 0.0 * x[2], 0.0 * x[2]])
+
+trace_fun = bempp.api.GridFunction(space, fun=fun, dual_space=space)
 
 elec = bempp.api.operators.boundary.maxwell.electric_field(space, space, space, k, parameters=parameters)
 elec2 = bempp.api.operators.boundary.maxwell.electric_field(space2, space2, space2, k, parameters=parameters)

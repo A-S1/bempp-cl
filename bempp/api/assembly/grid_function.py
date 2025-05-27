@@ -261,8 +261,13 @@ class GridFunction(object):
 
         if fun is not None:
             from bempp.api.integration.triangle_gauss import rule
+            from bempp.api.integration.gauss import rule as line_rule
 
-            points, weights = rule(self._parameters.quadrature.regular)
+            if "triangle" in comp_domain.grid.type.lower():
+                points, weights = rule(self._parameters.quadrature.regular)
+            
+            elif "line" in comp_domain.grid.type.lower():
+                points, weights = line_rule(self._parameters.quadrature.regular)
 
             if function_parameters is None:
                 function_parameters = _np.array([], dtype="float64")
@@ -507,7 +512,12 @@ class GridFunction(object):
 
     def evaluate_on_element_centers(self):
         """Evaluate the grid function on all element centers."""
-        local_coordinates = _np.array([[1.0 / 3], [1.0 / 3]])
+
+        if "triangle" in self.space.grid.type.lower():
+            local_coordinates = _np.array([[1.0 / 3], [1.0 / 3]])
+
+        elif "line" in self.space.grid.type.lower():
+            local_coordinates = _np.array([[0.5], [0.5]])
 
         values = _np.zeros(
             (self.component_count, self.space.grid.number_of_elements), dtype=self.dtype
@@ -526,7 +536,11 @@ class GridFunction(object):
         of the element values at the vertices is taken.
         """
         grid = self.space.grid
-        local_coordinates = _np.array([[0, 1, 0], [0, 0, 1]], dtype="float64")
+
+        if "triangle" in grid.type.lower():
+            local_coordinates = _np.array([[0, 1, 0], [0, 0, 1]], dtype="float64")
+        elif "line" in grid.type.lower():
+            local_coordinates = _np.array([[0, 1]], dtype="float64")
 
         values = _np.zeros(
             (self.component_count, grid.number_of_vertices), dtype=self.dtype
