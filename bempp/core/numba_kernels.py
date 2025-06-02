@@ -2770,6 +2770,8 @@ def thinwire_efield_regular_assembler(
     test_basis_functions = get_line_transform(test_grid_data, test_elements, quad_points, test_multipliers)
     trial_basis_functions = get_line_transform(trial_grid_data, trial_elements, quad_points, trial_multipliers)	
 
+    	
+
     test_basis_divergence = get_divergence_line(test_grid_data, test_elements, quad_points, test_multipliers)
     trial_basis_divergence = get_divergence_line(trial_grid_data, trial_elements, quad_points, trial_multipliers)
 
@@ -2792,6 +2794,8 @@ def thinwire_efield_regular_assembler(
     for i in _numba.prange(n_test_elements):
         test_element = test_elements[i]
         local_result = _np.zeros((n_trial_elements, nshape_test, nshape_trial), dtype=result_type)
+
+        print(f"test_basis_functions values:", test_basis_functions[i, :, :, :])
         
         # Map the quadrature points on the test element to global coordinates.
         # shape is (1, n_quad_points) for 1D (wire axis) data.

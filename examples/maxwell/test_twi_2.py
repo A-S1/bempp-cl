@@ -62,7 +62,7 @@ rhs = bempp.api.GridFunction(space, coefficients=coeffs, parameters=parameters)
 from bempp.api.linalg import lu
 
 mat = elec.weak_form().to_dense()
-# print("Matrix shape:", mat)
+print("Matrix shape:", mat)
 print("Is symmetric:", np.allclose(mat, mat.T))
 # print("error:", np.abs(mat - mat.T))
 
