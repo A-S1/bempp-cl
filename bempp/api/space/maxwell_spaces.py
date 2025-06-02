@@ -454,7 +454,7 @@ def pwl0_function_space(
 
 def _compute_pwl0_space_data(
         grid, 
-        include_boundary_dofs: bool = True
+        include_boundary_dofs: bool = False
 ):
     """
     Compute the local-to-global mapping for piecewise linear functions on a line grid.
@@ -467,7 +467,7 @@ def _compute_pwl0_space_data(
     number_of_vertices = grid.number_of_vertices
     number_of_elements = grid.number_of_elements
 
-    # Count how many segments meet at each vertex
+    # 1) Count how many segments meet at each vertex
     valence = _np.zeros(number_of_vertices, dtype=int)
     # grid.elements.shape == (2, nE)
     for v in grid.elements[0]:
@@ -475,13 +475,12 @@ def _compute_pwl0_space_data(
     for v in grid.elements[1]:
         valence[v] += 1
 
-    # Which vertices will carry DOFs
-    has_dof = valence > 1    # only interiors by default
-    # If include_boundary_dofs is True, we also include vertices with valence 1
+    # 2) Which vertices will carry DOFs?
+    has_dof = valence > 1    # only interiors
     if include_boundary_dofs:
         has_dof[valence == 1] = True
 
-    #  Give each such vertex a global DOF index
+    # 3) Give each such vertex a global DOF index
     vertex2dof = -_np.ones(number_of_vertices, dtype=int)
     dof_count = 0
     for v in range(number_of_vertices):
@@ -489,7 +488,7 @@ def _compute_pwl0_space_data(
             vertex2dof[v] = dof_count
             dof_count += 1
 
-    #3 Build local2global: for each segment, look up its two endpoint DOFs
+    # 4) Build local2global: for each segment, look up its two endpoint DOFs
     local2global = _np.empty((number_of_elements, 2), dtype=int)
     for e in range(number_of_elements):
         v0, v1 = grid.elements[:, e]
@@ -503,9 +502,10 @@ def _compute_pwl0_space_data(
         elif b < 0 and a >= 0:
             local2global[e, 1] = a
 
-    #  segment is “supported” if it has at least one valid local DOF
+    # 5) A segment is “supported” if it has at least one valid local DOF
     support = _np.any(local2global >= 0, axis=1)
 
+    # 6) Local multipliers = edge lengths (you could also normalize if desired)
     edge_lengths = grid.diameters  # shape (nE,)
     local_multipliers = _np.vstack([edge_lengths, edge_lengths]).T
 

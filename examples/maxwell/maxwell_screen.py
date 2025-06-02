@@ -110,7 +110,6 @@ def tangential_trace(x, n, domain_index, result):
 
 
 trace_fun = bempp.api.GridFunction(div_space, fun=tangential_trace, dual_space=curl_space)
-trace_fun.plot()
 # -
 
 # We use a direct LU solver to solve the system.

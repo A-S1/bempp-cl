@@ -134,15 +134,14 @@ def get_line_transform(grid_data, elements, local_points, local_multipliers):
         s = local_points
 
     nelements = len(elements)
-   
-    # result[element, basisIndex, coord, qp]
+    # result[e, basisIndex, coord, qp]
     result = _np.zeros((nelements, 2, 3, npoints), dtype=_np.float64)
 
-    for element_index in range(nelements):
-        element = elements[element_index]
+    for e_i in range(nelements):
+        e = elements[e_i]
         # end‐points
-        v0 = grid_data.vertices[:, grid_data.elements[0, element]]
-        v1 = grid_data.vertices[:, grid_data.elements[1, element]]
+        v0 = grid_data.vertices[:, grid_data.elements[0, e]]
+        v1 = grid_data.vertices[:, grid_data.elements[1, e]]
         seg = v1 - v0
         length = _np.linalg.norm(seg)
         if length > 0.0:
@@ -151,23 +150,23 @@ def get_line_transform(grid_data, elements, local_points, local_multipliers):
             tangent = _np.zeros(3, dtype=_np.float64)
 
         # apply local multipliers to the scalars
-        # print("local multipliers", local_multipliers[element_index, 0], local_multipliers[element_index, 1])
+        # print("local multipliers", local_multipliers[e_i, 0], local_multipliers[e_i, 1])
 
-        m0 = 1 / local_multipliers[element_index, 0]
-        m1 = 1 / local_multipliers[element_index, 1]
+        m0 = 1 / local_multipliers[e_i, 0]
+        m1 = 1 / local_multipliers[e_i, 1]
 
         
         for qp in range(npoints):
             phi0 = (1 / m0 - s[qp]) * m0
             phi1 = s[qp]         * m1
             # fill the vector basis functions
-            result[element_index, 0, 0, qp] = tangent[0] * phi0
-            result[element_index, 0, 1, qp] = tangent[1] * phi0
-            result[element_index, 0, 2, qp] = tangent[2] * phi0
+            result[e_i, 0, 0, qp] = tangent[0] * phi0
+            result[e_i, 0, 1, qp] = tangent[1] * phi0
+            result[e_i, 0, 2, qp] = tangent[2] * phi0
 
-            result[element_index, 1, 0, qp] = tangent[0] * phi1
-            result[element_index, 1, 1, qp] = tangent[1] * phi1
-            result[element_index, 1, 2, qp] = tangent[2] * phi1
+            result[e_i, 1, 0, qp] = tangent[0] * phi1
+            result[e_i, 1, 1, qp] = tangent[1] * phi1
+            result[e_i, 1, 2, qp] = tangent[2] * phi1
 
     return result
 
@@ -185,10 +184,10 @@ def get_divergence_line(grid_data, elements, local_points, local_multipliers):
     m1 = local_multipliers[:, 1]
 
     for element_index in _numba.prange(nelements):
-        element = elements[element_index]
+        e = elements[element_index]
         # end‐points
-        v0 = grid_data.vertices[:, grid_data.elements[0, element]]
-        v1 = grid_data.vertices[:, grid_data.elements[1, element]]
+        v0 = grid_data.vertices[:, grid_data.elements[0, e]]
+        v1 = grid_data.vertices[:, grid_data.elements[1, e]]
         seg = v1 - v0
         length = _np.linalg.norm(seg)
         if length > 0.0:
