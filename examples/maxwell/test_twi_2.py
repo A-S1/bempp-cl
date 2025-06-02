@@ -16,7 +16,7 @@ class _DenseAssembly(object):
 
 parameters = SimpleNamespace()
 parameters.quadrature = SimpleNamespace()
-parameters.quadrature.regular = 30
+parameters.quadrature.regular = 6
 parameters.quadrature.singular = 30
 
 parameters.assembly = SimpleNamespace()
