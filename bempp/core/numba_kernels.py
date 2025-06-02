@@ -2918,12 +2918,11 @@ def thinwire_efield_singular(
         test_local_points = test_points[test_offset : test_offset + npoints]
         trial_local_points = trial_points[trial_offset : trial_offset + npoints]
         test_global_points = grid_data.local2global(test_element, test_local_points)
-        trial_global_points = grid_data.local2global(trial_element, trial_local_points)
+        trial_global_points = trial_local_points * test_normal #grid_data.local2global(trial_element, trial_local_points)
         test_fun_values = test_shapeset(
             test_points[test_offset : test_offset + npoints]
         )
- 
-        print(test_global_points)
+
         
 
         test_fun_vec_values = get_line_transform(
@@ -2957,14 +2956,6 @@ def thinwire_efield_singular(
                 sign_matrix[i, j] = 1 if (test_div[i]
                                             @ test_div[j]> 0) else -1
 
-        # evaluate kernel on quadrature points
-        S = kernel_evaluator(
-            test_global_points,
-            trial_global_points,
-            test_edge_lengths[index],
-            None,
-            kernel_parameters,
-        )
 
 
         # compute the analytical integral first using the values on the subsegments and S1 and S2 then 
@@ -2979,15 +2970,15 @@ def thinwire_efield_singular(
                 sign = sign_matrix[ test_fun_index, trial_fun_index]
                 for test_point_index in range(npoints):
                     S1  = 1 / test_normal * ( _np.sqrt(wire_radius**2 +
-                            (test_global_points[:,test_point_index] - test_normal)**2) - _np.sqrt(wire_radius**2 + test_global_points[:,test_point_index]**2) ) + test_global_points[:,test_point_index] / test_normal * _np.log( (test_global_points[:,test_point_index] + _np.sqrt( wire_radius**2 + test_global_points[:,test_point_index] **2 )) / (test_global_points[:,test_point_index] - test_normal + _np.sqrt( wire_radius**2 + (test_global_points[:,test_point_index] - test_normal)**2 )) ) - 1j * wavenumber * test_normal / 2
-                    S2 = 1 / test_normal**2 * _np.log( (test_global_points[:,test_point_index] + _np.sqrt( wire_radius**2 + test_global_points[:,test_point_index] **2 )) / (test_global_points[:,test_point_index] - test_normal + _np.sqrt( wire_radius**2 + (test_global_points[:,test_point_index]- test_normal)**2 )) - 1j * wavenumber * test_normal) 
-                    local_result += quad_weights[weights_offset + test_point_index] * (test_fun_values[test_fun_index, test_point_index] * S1 - sign * inv_k2 * S2)   
+                            (trial_global_points[:,test_point_index] - test_normal)**2) - _np.sqrt(wire_radius**2 + trial_global_points[:,test_point_index]**2) ) + trial_global_points[:,test_point_index] / test_normal * _np.log( (trial_global_points[:,test_point_index] + _np.sqrt( wire_radius**2 + trial_global_points[:,test_point_index] **2 )) / (trial_global_points[:,test_point_index] - test_normal + _np.sqrt( wire_radius**2 + (trial_global_points[:,test_point_index] - test_normal)**2 )) ) - 1j * wavenumber * test_normal / 2
+                    S2 = 1 / test_normal**2 * _np.log( (trial_global_points[:,test_point_index] + _np.sqrt( wire_radius**2 + trial_global_points[:,test_point_index] **2 )) / (trial_global_points[:,test_point_index] - test_normal + _np.sqrt( wire_radius**2 + (trial_global_points[:,test_point_index]- test_normal)**2 )) - 1j * wavenumber * test_normal) 
+                    local_result += quad_weights[weights_offset + test_point_index] * (_np.linalg.norm(test_fun_values[test_fun_index, test_point_index]) * S1 - sign * inv_k2 * S2)   
 
                 result[
                         nshape_trial * nshape_test * index
                         + test_fun_index * nshape_trial
                         + trial_fun_index
-                    ] += inv4pi * _np.linalg.norm(local_result)
+                    ] += inv4pi * local_result
 
 
 @_numba.jit(
