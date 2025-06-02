@@ -2923,7 +2923,7 @@ def thinwire_efield_singular(
             test_points[test_offset : test_offset + npoints]
         )
  
-
+        print(test_global_points)
         
 
         test_fun_vec_values = get_line_transform(
