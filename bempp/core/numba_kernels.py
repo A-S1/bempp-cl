@@ -2482,8 +2482,8 @@ def maxwell_efield_regular_assembler(
 ):
     """Evaluate Maxwell electric field kernel."""
     # setup
-    print(test_global_dofs, trial_global_dofs)
-    
+   
+
     wavenumber = kernel_parameters[0] + 1j * kernel_parameters[1]
     result_type = result.dtype
     n_quad_points = len(quad_weights)
@@ -2755,6 +2755,8 @@ def thinwire_efield_regular_assembler(
     Evaluate the electric field integral for thin-wire (Pocklington) formulations.
     """
     # --- Setup ---
+    print("dof dict", test_global_dofs, trial_global_dofs)
+    
     wavenumber = kernel_parameters[0] + 1j * kernel_parameters[1]
     k2 = wavenumber * wavenumber	
 
@@ -2797,7 +2799,7 @@ def thinwire_efield_regular_assembler(
         test_element = test_elements[i]
         local_result = _np.zeros((n_trial_elements, nshape_test, nshape_trial), dtype=result_type)
 
-        print(f"test_basis_functions values:", test_basis_functions[i, :, :, :])
+        # print(f"test_basis_functions values:", test_basis_functions[i, :, :, :])
         
         # Map the quadrature points on the test element to global coordinates.
         # shape is (1, n_quad_points) for 1D (wire axis) data.
