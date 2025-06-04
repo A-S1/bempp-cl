@@ -16,7 +16,7 @@ class _DenseAssembly(object):
 
 parameters = SimpleNamespace()
 parameters.quadrature = SimpleNamespace()
-parameters.quadrature.regular = 6
+parameters.quadrature.regular = 30
 parameters.quadrature.singular = 30
 
 parameters.assembly = SimpleNamespace()
@@ -52,7 +52,7 @@ def trace_function(x, n, domain_index, result):
     value = 1 if np.isclose(x[0], 0) else 0
     result[2] = value  # Set the third component for the wire trace
 
-coeffs = [0, ,0, 0, 0, 10, 0, 0, 0, 0, 0]
+coeffs = [0, 0, 0, 0, 10, 0, 0, 0, 0]
 
 elec = bempp.api.operators.boundary.maxwell.electric_field(space, space, space, k, parameters=parameters)
 rhs = bempp.api.GridFunction(space, coefficients=coeffs, parameters=parameters)
@@ -62,8 +62,10 @@ rhs = bempp.api.GridFunction(space, coefficients=coeffs, parameters=parameters)
 from bempp.api.linalg import lu
 
 mat = elec.weak_form().to_dense()
-# print("Matrix shape:", mat)
-# print("Is symmetric:", np.allclose(mat, mat.T))
+mat = mat[2:, 2:]  # Extract the relevant part of the matrix
+
+print("Matrix shape:", mat)
+print("Is symmetric:", np.allclose(mat, mat.T))
 # print("error:", np.abs(mat - mat.T))
 
 lambda_data = np.linalg.solve(mat, coeffs)

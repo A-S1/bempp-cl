@@ -2755,8 +2755,7 @@ def thinwire_efield_regular_assembler(
     Evaluate the electric field integral for thin-wire (Pocklington) formulations.
     """
     # --- Setup ---
-    print("dof dict", test_global_dofs, trial_global_dofs)
-    
+
     wavenumber = kernel_parameters[0] + 1j * kernel_parameters[1]
     k2 = wavenumber * wavenumber	
 
@@ -2963,6 +2962,7 @@ def thinwire_efield_singular(
             for j in range(nshape_trial):
                 sign_matrix[i, j] = 1 if (test_div[i]
                                             @ test_div[j]> 0) else -1
+        print(f"sign_matrix: {sign_matrix}")
 
 
 
