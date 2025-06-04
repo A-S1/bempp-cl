@@ -42,7 +42,7 @@ parameters.fmm.dense_evaluation = False
 grid = bempp.api.import_grid("examples/maxwell/line_mesh_long.msh")
 
 #### Define space of Piecewise Linear Functions, with 0 at the boundaries  ####
-space = bempp.api.function_space(grid, "PWL", 0)
+space = bempp.api.function_space(grid, "PWL", 0, include_boundary_dofs=True)	
 
 #### Assemble the Matrix Z as a dens EFIE operator and the RHS with a central impulse trace function ####
 @bempp.api.complex_callable
@@ -52,7 +52,7 @@ def trace_function(x, n, domain_index, result):
     value = 1 if np.isclose(x[0], 0) else 0
     result[2] = value  # Set the third component for the wire trace
 
-coeffs = [ 0, 0, 0, 0, 10, 0, 0, 0, 0]
+coeffs = [0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0]
 
 elec = bempp.api.operators.boundary.maxwell.electric_field(space, space, space, k, parameters=parameters)
 rhs = bempp.api.GridFunction(space, coefficients=coeffs, parameters=parameters)

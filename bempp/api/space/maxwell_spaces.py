@@ -478,7 +478,7 @@ def _compute_pwl0_space_data(
     # 2) Which vertices will carry DOFs?
     has_dof = valence > 1    # only interiors
     if include_boundary_dofs:
-        has_dof[valence == 1] = True
+        has_dof = valence > 0  # all vertices
 
     # 3) Give each such vertex a global DOF index
     vertex2dof = -_np.ones(number_of_vertices, dtype=int)
