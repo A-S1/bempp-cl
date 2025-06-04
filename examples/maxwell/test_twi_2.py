@@ -2,7 +2,7 @@ import bempp.api
 import numpy as np
 import matplotlib.pyplot as plt
 
-wavelength = 30
+wavelength = 40
 k = 2 * np.pi / wavelength
 
 from types import SimpleNamespace
@@ -52,7 +52,7 @@ def trace_function(x, n, domain_index, result):
     value = 1 if np.isclose(x[0], 0) else 0
     result[2] = value  # Set the third component for the wire trace
 
-coeffs = [ 0, 0, 1, 0, 0]
+coeffs = [ 0, 0, 0, 0, 10, 0, 0, 0, 0]
 
 elec = bempp.api.operators.boundary.maxwell.electric_field(space, space, space, k, parameters=parameters)
 rhs = bempp.api.GridFunction(space, coefficients=coeffs, parameters=parameters)
@@ -64,16 +64,21 @@ from bempp.api.linalg import lu
 mat = elec.weak_form().to_dense()
 print("Matrix shape:", mat)
 print("Is symmetric:", np.allclose(mat, mat.T))
-# print("error:", np.abs(mat - mat.T))
+print("error:", np.abs(mat - mat.T))
 
 lambda_data = np.linalg.solve(mat, coeffs)
+
+
+plot_data =  lambda_data
 
 # Print the solution
 print("Lambda data (solution):", lambda_data)
 
+current = np.real(plot_data)
+
 # Plot the solution
 plt.figure(figsize=(10, 6))
-plt.plot(np.abs(lambda_data), label='Solution Lambda Data')
+plt.plot(current, label='Solution Lambda Data')
 plt.title('Solution of the Maxwell Electric Field Boundary Operator')
 plt.xlabel('Index')
 plt.ylabel('Value')

@@ -134,7 +134,7 @@ slp_pot = bempp.api.operators.potential.maxwell.electric_field(div_space, points
 
 # The following commands now compute the total field by first computing the scattered field from the representation formula then adding the incident field.
 
-scattered_field_data = -slp_pot * lambda_data
+scattered_field_data = -elec * lambda_data
 incident_field_data = incident_field(points)
 field_data = scattered_field_data + incident_field_data
 

@@ -2482,6 +2482,8 @@ def maxwell_efield_regular_assembler(
 ):
     """Evaluate Maxwell electric field kernel."""
     # setup
+    print(test_global_dofs, trial_global_dofs)
+    
     wavenumber = kernel_parameters[0] + 1j * kernel_parameters[1]
     result_type = result.dtype
     n_quad_points = len(quad_weights)
