@@ -2925,6 +2925,7 @@ def thinwire_efield_singular(
         weights_offset = weights_offsets[index]
         npoints = number_of_quad_points[index]
         test_local_points = test_points[test_offset : test_offset + npoints]
+        print("test_local_points shape:", test_local_points.shape)
         trial_local_points = trial_points[trial_offset : trial_offset + npoints]
         test_global_points = grid_data.local2global(test_element, test_local_points)
         trial_global_points = trial_local_points * test_normal #grid_data.local2global(trial_element, trial_local_points)
