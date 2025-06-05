@@ -2970,7 +2970,7 @@ def thinwire_efield_singular(
         # compute numerically the outher integral, in all: 1/4pi Sum (weight(x_p))[phi(xp)S1(xp) -+ 1/k^2S2(xp)] with + when derivative test and trial 
         # are of the same sign and - when they are of different sign
         # then compute the value of the integral at the quadrature points
-
+        result_previous = _np.copy(result)
 
         for test_fun_index in range(nshape_test):
             for trial_fun_index in range(nshape_trial):
@@ -2982,15 +2982,15 @@ def thinwire_efield_singular(
                     S2 = 1 / test_normal**2 * _np.log( (trial_global_points[test_point_index] + _np.sqrt( wire_radius**2 + trial_global_points[test_point_index] **2 )) / (trial_global_points[test_point_index] - test_normal + _np.sqrt( wire_radius**2 + (trial_global_points[test_point_index]- test_normal)**2 )) - 1j * wavenumber * test_normal) 
                     local_result += quad_weights[weights_offset + test_point_index] * (_np.linalg.norm(test_fun_values[test_fun_index, test_point_index]) * S1 - sign * inv_k2 * S2)   
                 
-                result_previous = result[:]
+        
                 result[
                         nshape_trial * nshape_test * index
                         + test_fun_index * nshape_trial
                         + trial_fun_index
                     ] += inv4pi * local_result * test_edge_lengths[index] * test_edge_lengths[index]
+        
+        print(result - result_previous)
                 
-                print(result[:] - result_previous[:])
-
 
 @_numba.jit(
     nopython=True, parallel=True, error_model="numpy", fastmath=True, boundscheck=False
