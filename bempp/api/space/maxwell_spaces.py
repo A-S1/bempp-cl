@@ -498,9 +498,9 @@ def _compute_pwl0_space_data(
     for e in range(number_of_elements):
         a, b = local2global[e]
         if a < 0 and b >= 0:
-            local2global[e, 0] = b
+            local2global[e, 0] = -1
         elif b < 0 and a >= 0:
-            local2global[e, 1] = a
+            local2global[e, 1] = -1
 
     # 5) A segment is “supported” if it has at least one valid local DOF
     support = _np.any(local2global >= 0, axis=1)

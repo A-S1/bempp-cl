@@ -2865,7 +2865,9 @@ def thinwire_efield_regular_assembler(
             trial_element = trial_elements[trial_element_index]
             for test_fun_index in range(nshape_test):
                 for trial_fun_index in range(nshape_trial):
-                    # print(f"test_element: {i}, trial_element: {trial_element_index}, test_fun_index: {test_fun_index}, trial_fun_index: {trial_fun_index}, local_result: {local_result[trial_element_index, test_fun_index, trial_fun_index]}")
+                    if test_global_dofs[test_element, test_fun_index] < 0 or trial_global_dofs[trial_element, trial_fun_index] < 0:
+                        continue
+
                     result[
                                     test_global_dofs[test_element, test_fun_index],
                                     trial_global_dofs[trial_element, trial_fun_index],
@@ -2962,8 +2964,6 @@ def thinwire_efield_singular(
             for j in range(nshape_trial):
                 sign_matrix[i, j] = 1 if (test_div[i]
                                             @ test_div[j]> 0) else -1
-        print(f"sign_matrix: {sign_matrix}")
-
 
 
         # compute the analytical integral first using the values on the subsegments and S1 and S2 then 
@@ -2981,12 +2981,15 @@ def thinwire_efield_singular(
                             (trial_global_points[test_point_index] - test_normal)**2) - _np.sqrt(wire_radius**2 + trial_global_points[test_point_index]**2) ) + trial_global_points[test_point_index] / test_normal * _np.log( (trial_global_points[test_point_index] + _np.sqrt( wire_radius**2 + trial_global_points[test_point_index] **2 )) / (trial_global_points[test_point_index] - test_normal + _np.sqrt( wire_radius**2 + (trial_global_points[test_point_index] - test_normal)**2 )) ) - 1j * wavenumber * test_normal / 2
                     S2 = 1 / test_normal**2 * _np.log( (trial_global_points[test_point_index] + _np.sqrt( wire_radius**2 + trial_global_points[test_point_index] **2 )) / (trial_global_points[test_point_index] - test_normal + _np.sqrt( wire_radius**2 + (trial_global_points[test_point_index]- test_normal)**2 )) - 1j * wavenumber * test_normal) 
                     local_result += quad_weights[weights_offset + test_point_index] * (_np.linalg.norm(test_fun_values[test_fun_index, test_point_index]) * S1 - sign * inv_k2 * S2)   
-
+                
+                result_previous = result
                 result[
                         nshape_trial * nshape_test * index
                         + test_fun_index * nshape_trial
                         + trial_fun_index
                     ] += inv4pi * local_result * test_edge_lengths[index] * test_edge_lengths[index]
+                
+                print(result - result_previous)
 
 
 @_numba.jit(

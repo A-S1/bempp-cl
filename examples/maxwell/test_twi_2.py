@@ -2,7 +2,7 @@ import bempp.api
 import numpy as np
 import matplotlib.pyplot as plt
 
-wavelength = 40
+wavelength = 20
 k = 2 * np.pi / wavelength
 
 from types import SimpleNamespace
@@ -52,7 +52,7 @@ def trace_function(x, n, domain_index, result):
     value = 1 if np.isclose(x[0], 0) else 0
     result[2] = value  # Set the third component for the wire trace
 
-coeffs = [0, 0, 0, 0, 10, 0, 0, 0, 0]
+coeffs = [0, 0, 0, 0, 8, 0, 0, 0, 0]
 
 elec = bempp.api.operators.boundary.maxwell.electric_field(space, space, space, k, parameters=parameters)
 rhs = bempp.api.GridFunction(space, coefficients=coeffs, parameters=parameters)
