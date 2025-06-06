@@ -65,7 +65,7 @@ rhs = bempp.api.GridFunction(space, coefficients=coeffs, parameters=parameters)
 from bempp.api.linalg import lu
 
 mat = elec.weak_form().to_dense()
-mat = mat[2:, 2:]  # Extract the relevant part of the matrix
+# mat = mat[2:, 2:]  # Extract the relevant part of the matrix
 
 print("Matrix shape:", mat)
 print("Is symmetric:", np.allclose(mat, mat.T))
