@@ -462,7 +462,7 @@ def _compute_pwl0_space_data(
     In a line grid, the degrees of freedom are associated with the vertices (global_dof_count),
     but the local mapping (local2global and local multipliers) is defined per element (segment).
     """
-    include_boundary_dofs = True
+    # include_boundary_dofs = True
     #return global_dof_count, support, local2global, local_multipliers
     number_of_vertices = grid.number_of_vertices
     number_of_elements = grid.number_of_elements
