@@ -52,7 +52,7 @@ def trace_function(x, n, domain_index, result):
     value = 1 if np.isclose(x[0], 0) else 0
     result[2] = value  # Set the third component for the wire trace
 
-coeffs = np.zeros(space.global_dof_count-2, dtype=np.complex128)
+coeffs = np.zeros(space.global_dof_count, dtype=np.complex128)
 coeffs[9] = 3000  # Set the central impulse
 
 print(coeffs)
