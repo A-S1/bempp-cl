@@ -2851,8 +2851,8 @@ def thinwire_efield_regular_assembler(
                     #     continue
                     for trial_fun_index in range(nshape_trial):
                         for quad_point_index in range(n_quad_points):
-                            integrand = ((test_basis_functions[i, test_fun_index, :, test_point_index] @ trial_basis_functions[trial_element_index, trial_fun_index, :, quad_point_index]) -
-                                        1/ k2 * (test_basis_divergence[i, test_fun_index, test_point_index] * trial_basis_divergence[trial_element_index, trial_fun_index, quad_point_index])) * kernel_values[trial_element_index * n_quad_points + quad_point_index]
+                            integrand = (_np.dot((test_basis_functions[i, test_fun_index, :, test_point_index], trial_basis_functions[trial_element_index, trial_fun_index, :, quad_point_index])) -
+                                        1/ k2 * (test_basis_divergence[i, test_fun_index, test_point_index] * trial_basis_divergence[trial_element_index, trial_fun_index, quad_point_index]) )* kernel_values[trial_element_index * n_quad_points + quad_point_index]
                             local_result[trial_element_index, test_fun_index, trial_fun_index] += integrand * (quad_weights[test_point_index] * local_test_factor * factors[trial_element_index * n_quad_points + quad_point_index])
 
 
@@ -2978,7 +2978,9 @@ def  thinwire_efield_singular(
                 sign = sign_matrix[ test_fun_index, trial_fun_index]
                 for test_point_index in range(npoints):
                     S1  = 1 / test_normal * ( _np.sqrt(wire_radius**2 +
-                            (trial_global_points[test_point_index] - test_normal)**2) - _np.sqrt(wire_radius**2 + trial_global_points[test_point_index]**2) ) + trial_global_points[test_point_index] / test_normal * _np.log( (trial_global_points[test_point_index] + _np.sqrt( wire_radius**2 + trial_global_points[test_point_index] **2 )) / (trial_global_points[test_point_index] - test_normal + _np.sqrt( wire_radius**2 + (trial_global_points[test_point_index] - test_normal)**2 )) ) - 1j * wavenumber * test_normal / 2
+                            (trial_global_points[test_point_index] - test_normal)**2) - 
+                            _np.sqrt(wire_radius**2 + trial_global_points[test_point_index]**2) ) + trial_global_points[test_point_index] / test_normal * _np.log( (trial_global_points[test_point_index] + 
+                            _np.sqrt( wire_radius**2 + trial_global_points[test_point_index] **2 )) / (trial_global_points[test_point_index] - test_normal + _np.sqrt( wire_radius**2 + (trial_global_points[test_point_index] - test_normal)**2 )) ) - 1j * wavenumber * test_normal / 2
                     S2 = 1 / test_normal**2 * (_np.log((trial_global_points[test_point_index] + _np.sqrt( wire_radius**2 + trial_global_points[test_point_index] **2 )) / (trial_global_points[test_point_index] - test_normal + _np.sqrt( wire_radius**2 + (trial_global_points[test_point_index]- test_normal)**2 ))) - 1j * wavenumber * test_normal) 
                     local_result += quad_weights[weights_offset + test_point_index] * ((test_fun_values[test_fun_index, test_point_index]) * S1 - sign * inv_k2 * S2)   
                 
@@ -2987,7 +2989,7 @@ def  thinwire_efield_singular(
                         nshape_trial * nshape_test * index
                         + test_fun_index * nshape_trial
                         + trial_fun_index
-                    ] += inv4pi * local_result * test_edge_lengths[index] * test_edge_lengths[index]
+                    ] += inv4pi * local_result * test_edge_lengths[index] #* test_edge_lengths[index]
         
         print(result - result_previous)
                 

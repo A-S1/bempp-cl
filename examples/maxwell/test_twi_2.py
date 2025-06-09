@@ -91,7 +91,7 @@ current = np.abs(plot_data)  # Use absolute values for plotting
 
 # Plot the solution
 plt.figure(figsize=(10, 6))
-plt.plot(current, label='Solution Lambda Data')
+plt.plot(plot_data.real, label='Solution Lambda Data')
 plt.plot(plot_data.imag, label='Imaginary Part of Lambda Data', linestyle='--')
 plt.title('Solution of the Maxwell Electric Field Boundary Operator')
 plt.xlabel('Index')
