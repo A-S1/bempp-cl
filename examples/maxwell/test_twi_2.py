@@ -2,7 +2,7 @@ import bempp.api
 import numpy as np
 import matplotlib.pyplot as plt
 
-wavelength = 60
+wavelength = 40
 k = 2 * np.pi / wavelength
 
 from types import SimpleNamespace
@@ -74,8 +74,10 @@ print("Is symmetric:", np.allclose(mat, mat.T))
 
 lambda_data = np.linalg.solve(mat, coeffs)
 
+plot_data_1 = lambda_data.copy()
 
-plot_data =  lambda_data
+
+plot_data =  np.abs(lambda_data)
 
 # set the plot data to only their real part
 # plot_data = np.abs(lambda_data)
@@ -90,8 +92,9 @@ print("Lambda data (solution):", lambda_data)
 current = np.abs(plot_data)  # Use absolute values for plotting
 
 # Plot the solution
+
 plt.figure(figsize=(10, 6))
-plt.plot(plot_data, label='Solution Lambda Data')
+plt.plot(plot_data_1.real, label='Solution Lambda Data')
 # plt.plot(plot_data.imag, label='Imaginary Part of Lambda Data', linestyle='--')
 plt.title('Solution of the Maxwell Electric Field Boundary Operator')
 plt.xlabel('Index')
