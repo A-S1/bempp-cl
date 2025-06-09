@@ -78,7 +78,7 @@ lambda_data = np.linalg.solve(mat, coeffs)
 plot_data =  lambda_data
 
 # set the plot data to only their real part
-plot_data = plot_data.imag
+# plot_data = np.abs(lambda_data)
 #split the solution in two and order the first split in ascending order
 lambda_data = np.concatenate((np.sort(plot_data[:len(plot_data)//2]), np.sort(plot_data[len(plot_data)//2:])))
 #...and order the second split in descending order
@@ -91,8 +91,8 @@ current = np.abs(plot_data)  # Use absolute values for plotting
 
 # Plot the solution
 plt.figure(figsize=(10, 6))
-plt.plot(plot_data.real, label='Solution Lambda Data')
-plt.plot(plot_data.imag, label='Imaginary Part of Lambda Data', linestyle='--')
+plt.plot(plot_data, label='Solution Lambda Data')
+# plt.plot(plot_data.imag, label='Imaginary Part of Lambda Data', linestyle='--')
 plt.title('Solution of the Maxwell Electric Field Boundary Operator')
 plt.xlabel('Index')
 plt.ylabel('Value')
