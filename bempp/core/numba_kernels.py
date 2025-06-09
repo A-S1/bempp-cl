@@ -2979,7 +2979,7 @@ def thinwire_efield_singular(
                 for test_point_index in range(npoints):
                     S1  = 1 / test_normal * ( _np.sqrt(wire_radius**2 +
                             (trial_global_points[test_point_index] - test_normal)**2) - _np.sqrt(wire_radius**2 + trial_global_points[test_point_index]**2) ) + trial_global_points[test_point_index] / test_normal * _np.log( (trial_global_points[test_point_index] + _np.sqrt( wire_radius**2 + trial_global_points[test_point_index] **2 )) / (trial_global_points[test_point_index] - test_normal + _np.sqrt( wire_radius**2 + (trial_global_points[test_point_index] - test_normal)**2 )) ) - 1j * wavenumber * test_normal / 2
-                    S2 = 1 / test_normal**2 * _np.log( (trial_global_points[test_point_index] + _np.sqrt( wire_radius**2 + trial_global_points[test_point_index] **2 )) / (trial_global_points[test_point_index] - test_normal + _np.sqrt( wire_radius**2 + (trial_global_points[test_point_index]- test_normal)**2 )) - 1j * wavenumber * test_normal) 
+                    S2 = 1 / test_normal**2 * (_np.log((trial_global_points[test_point_index] + _np.sqrt( wire_radius**2 + trial_global_points[test_point_index] **2 )) / (trial_global_points[test_point_index] - test_normal + _np.sqrt( wire_radius**2 + (trial_global_points[test_point_index]- test_normal)**2 ))) - 1j * wavenumber * test_normal) 
                     local_result += quad_weights[weights_offset + test_point_index] * (_np.linalg.norm(test_fun_values[test_fun_index, test_point_index]) * S1 - sign * inv_k2 * S2)   
                 
         

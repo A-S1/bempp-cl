@@ -2,7 +2,7 @@ import bempp.api
 import numpy as np
 import matplotlib.pyplot as plt
 
-wavelength = 30
+wavelength = 60
 k = 2 * np.pi / wavelength
 
 from types import SimpleNamespace
@@ -77,10 +77,17 @@ lambda_data = np.linalg.solve(mat, coeffs)
 
 plot_data =  lambda_data
 
+# set the plot data to only their real part
+plot_data = plot_data.imag
+#split the solution in two and order the first split in ascending order
+lambda_data = np.concatenate((np.sort(plot_data[:len(plot_data)//2]), np.sort(plot_data[len(plot_data)//2:])))
+#...and order the second split in descending order
+lambda_data = np.concatenate((lambda_data[:len(lambda_data)//2], lambda_data[len(lambda_data)//2:][::-1]))
+
 # Print the solution
 print("Lambda data (solution):", lambda_data)
 
-current = np.abs(plot_data)
+current = np.abs(lambda_data)  # Use absolute values for plotting
 
 # Plot the solution
 plt.figure(figsize=(10, 6))
