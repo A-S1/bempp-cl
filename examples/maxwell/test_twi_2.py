@@ -2,7 +2,7 @@ import bempp.api
 import numpy as np
 import matplotlib.pyplot as plt
 
-wavelength = 20
+wavelength = 40
 k = 2 * np.pi / wavelength
 
 from types import SimpleNamespace
@@ -56,7 +56,6 @@ coeffs = np.zeros(space.global_dof_count-2, dtype=np.complex128)
 coeffs[9] = 30  # Set the central impulse
 
 
-
 print(coeffs)
 
 elec = bempp.api.operators.boundary.maxwell.electric_field(space, space, space, k, parameters=parameters)
@@ -67,7 +66,7 @@ rhs = bempp.api.GridFunction(space, coefficients=coeffs, parameters=parameters)
 from bempp.api.linalg import lu
 
 mat = elec.weak_form().to_dense()
-mat = mat[2:, 2:]  
+mat = mat[2:, 2:]  # Extract the relevant part of the matrix
 
 print("Matrix shape:", mat)
 print("Is symmetric:", np.allclose(mat, mat.T))
@@ -88,7 +87,7 @@ lambda_data = np.concatenate((np.sort(plot_data[:len(plot_data)//2]), np.sort(pl
 lambda_data = np.concatenate((lambda_data[:len(lambda_data)//2], lambda_data[len(lambda_data)//2:][::-1]))
 
 # Print the solution
-print("Lambda data (solution):", plot_data_1)
+print("Lambda data (solution):", lambda_data)
 
 current = np.abs(plot_data)  # Use absolute values for plotting
 
