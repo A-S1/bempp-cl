@@ -2,7 +2,7 @@ import bempp.api
 import numpy as np
 import matplotlib.pyplot as plt
 
-wavelength = 40
+wavelength = 120
 k = 2 * np.pi / wavelength
 
 from types import SimpleNamespace
@@ -18,7 +18,6 @@ parameters = SimpleNamespace()
 parameters.quadrature = SimpleNamespace()
 parameters.quadrature.regular = 30
 parameters.quadrature.singular = 30
-
 parameters.assembly = SimpleNamespace()
 parameters.assembly.dense = _DenseAssembly()
 parameters.assembly.always_promote_to_double = False
@@ -53,10 +52,10 @@ def trace_function(x, n, domain_index, result):
     result[2] = value  # Set the third component for the wire trace
 
 coeffs = np.zeros(space.global_dof_count-2, dtype=np.complex128)
-coeffs[9] = 30  # Set the central impulse
+coeffs[(space.global_dof_count-2)//2] = 5  # Set the central impulse
 
+# identity = bempp.api.operators.boundary.sparse.identity(space, space, space, parameters=parameters)
 
-print(coeffs)
 
 elec = bempp.api.operators.boundary.maxwell.electric_field(space, space, space, k, parameters=parameters)
 rhs = bempp.api.GridFunction(space, coefficients=coeffs, parameters=parameters)
@@ -74,17 +73,14 @@ print("Is symmetric:", np.allclose(mat, mat.T))
 
 lambda_data = np.linalg.solve(mat, coeffs)
 
-plot_data_1 = lambda_data.copy()
+plot_data_1 = np.zeros(space.global_dof_count, dtype=np.complex128)
+plot_data_1[1:-1] = lambda_data.copy()
+plot_data_1[0] = 0
+plot_data_1[-1] = 0  # Set the last value to zero for plotting
 
 
 plot_data =  np.abs(lambda_data)
 
-# set the plot data to only their real part
-# plot_data = np.abs(lambda_data)
-#split the solution in two and order the first split in ascending order
-lambda_data = np.concatenate((np.sort(plot_data[:len(plot_data)//2]), np.sort(plot_data[len(plot_data)//2:])))
-#...and order the second split in descending order
-lambda_data = np.concatenate((lambda_data[:len(lambda_data)//2], lambda_data[len(lambda_data)//2:][::-1]))
 
 # Print the solution
 print("Lambda data (solution):", lambda_data)
@@ -95,7 +91,7 @@ current = np.abs(plot_data)  # Use absolute values for plotting
 
 plt.figure(figsize=(10, 6))
 plt.plot(plot_data_1.real, label='Solution Lambda Data')
-# plt.plot(plot_data.imag, label='Imaginary Part of Lambda Data', linestyle='--')
+plt.plot(plot_data_1.imag, label='Imaginary Part of Lambda Data', linestyle='--')
 plt.title('Solution of the Maxwell Electric Field Boundary Operator')
 plt.xlabel('Index')
 plt.ylabel('Value')
