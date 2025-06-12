@@ -195,8 +195,8 @@ def get_divergence_line(grid_data, elements, local_points, local_multipliers):
         else:
             tangent = _np.zeros(3, dtype=_np.float64)
 
-        m0 = 1 / local_multipliers[element_index, 0]
-        m1 = 1 / local_multipliers[element_index, 1]
+        m0 = 1 #/ local_multipliers[element_index, 0]
+        m1 = 1 #/ local_multipliers[element_index, 1]
 
         for qp in range(npoints):
         
@@ -2773,7 +2773,8 @@ def thinwire_efield_regular_assembler(
     test_basis_functions = get_line_transform(test_grid_data, test_elements, quad_points, test_multipliers)
     trial_basis_functions = get_line_transform(trial_grid_data, trial_elements, quad_points, trial_multipliers)	
 
-    	
+
+
 
     test_basis_divergence = get_divergence_line(test_grid_data, test_elements, quad_points, test_multipliers)
     trial_basis_divergence = get_divergence_line(trial_grid_data, trial_elements, quad_points, trial_multipliers)
