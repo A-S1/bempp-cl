@@ -150,7 +150,7 @@ def get_line_transform(grid_data, elements, local_points, local_multipliers):
             tangent = _np.zeros(3, dtype=_np.float64)
 
         # apply local multipliers to the scalars
-        # print("local multipliers", local_multipliers[element_index, 0], local_multipliers[element_index, 1])
+       
 
         m0 = 1 / local_multipliers[element_index, 0]
         m1 = 1 / local_multipliers[element_index, 1]
@@ -2799,7 +2799,6 @@ def thinwire_efield_regular_assembler(
         test_element = test_elements[i]
         local_result = _np.zeros((n_trial_elements, nshape_test, nshape_trial), dtype=result_type)
 
-        # print(f"test_basis_functions values:", test_basis_functions[i, :, :, :])
         
         # Map the quadrature points on the test element to global coordinates.
         # shape is (1, n_quad_points) for 1D (wire axis) data.
@@ -2971,7 +2970,7 @@ def  thinwire_efield_singular(
         # compute numerically the outher integral, in all: 1/4pi Sum (weight(x_p))[phi(xp)S1(xp) -+ 1/k^2S2(xp)] with + when derivative test and trial 
         # are of the same sign and - when they are of different sign
         # then compute the value of the integral at the quadrature points
-        result_previous = _np.copy(result)
+
 
         for test_fun_index in range(nshape_test):
             for trial_fun_index in range(nshape_trial):
@@ -2992,7 +2991,7 @@ def  thinwire_efield_singular(
                         + trial_fun_index
                     ] += inv4pi * local_result #* test_edge_lengths[index] #* test_edge_lengths[index]
         
-        print(result - result_previous)
+
                 
 
 @_numba.jit(

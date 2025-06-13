@@ -2,7 +2,7 @@ import bempp.api
 import numpy as np
 import matplotlib.pyplot as plt
 
-wavelength = 120
+wavelength = 50
 k = 2 * np.pi / wavelength
 
 from types import SimpleNamespace
@@ -40,62 +40,43 @@ parameters.fmm.dense_evaluation = False
 #### Straight wire, define the grid ####
 grid = bempp.api.import_grid("examples/maxwell/line_mesh_long.msh")
 
-#### Define space of Piecewise Linear Functions, with 0 at the boundaries  ####
-space = bempp.api.function_space(grid, "PWL", 0, include_boundary_dofs=True)	
-
-#### Assemble the Matrix Z as a dens EFIE operator and the RHS with a central impulse trace function ####
-@bempp.api.complex_callable
-def trace_function(x, n, domain_index, result):
-    """Trace function for the wire."""
-
-    value = 1 if np.isclose(x[0], 0) else 0
-    result[2] = value  # Set the third component for the wire trace
-
-coeffs = np.zeros(space.global_dof_count-2, dtype=np.complex128)
-coeffs[(space.global_dof_count-2)//2] = 5  # Set the central impulse
-
-# identity = bempp.api.operators.boundary.sparse.identity(space, space, space, parameters=parameters)
-
-
-elec = bempp.api.operators.boundary.maxwell.electric_field(space, space, space, k, parameters=parameters)
-rhs = bempp.api.GridFunction(space, coefficients=coeffs, parameters=parameters)
-
-
-#### Solve the system using LU decomposition ####
-from bempp.api.linalg import lu
-
-mat = elec.weak_form().to_dense()
-mat = mat[2:, 2:]  # Extract the relevant part of the matrix
-
-print("Matrix shape:", mat)
-print("Is symmetric:", np.allclose(mat, mat.T))
-# print("error:", np.abs(mat - mat.T))
-
-lambda_data = np.linalg.solve(mat, coeffs)
-
-plot_data_1 = np.zeros(space.global_dof_count, dtype=np.complex128)
-plot_data_1[1:-1] = lambda_data.copy()
-plot_data_1[0] = 0
-plot_data_1[-1] = 0  # Set the last value to zero for plotting
-
-
-plot_data =  np.abs(lambda_data)
-
-
-# Print the solution
-print("Lambda data (solution):", lambda_data)
-
-current = np.abs(plot_data)  # Use absolute values for plotting
-
-# Plot the solution
-
 plt.figure(figsize=(10, 6))
-plt.plot(plot_data_1.real, label='Solution Lambda Data')
-plt.plot(plot_data_1.imag, label='Imaginary Part of Lambda Data', linestyle='--')
-plt.title('Solution of the Maxwell Electric Field Boundary Operator')
-plt.xlabel('Index')
-plt.ylabel('Value')
-plt.legend()
-plt.grid()
+for i in range(5):
+#### Define space of Piecewise Linear Functions, with 0 at the boundaries  ####
+    space = bempp.api.function_space(grid, "PWL", 0, include_boundary_dofs=True)	
+
+
+    coeffs = np.zeros(space.global_dof_count-2, dtype=np.complex128)
+    coeffs[(space.global_dof_count-2)//2] = 5  # Set the central impulse
+
+
+
+    elec = bempp.api.operators.boundary.maxwell.electric_field(space, space, space, k, parameters=parameters)
+    rhs = bempp.api.GridFunction(space, coefficients=coeffs, parameters=parameters)
+
+
+    #### Solve the system using LU decomposition ####
+    from bempp.api.linalg import lu
+
+    mat = elec.weak_form().to_dense()
+    mat = mat[2:, 2:]  # Extract the relevant part of the matrix
+
+    lambda_data = np.linalg.solve(mat, coeffs)
+
+    plot_data_1 = np.zeros(space.global_dof_count, dtype=np.complex128)
+    plot_data_1[1:-1] = lambda_data.copy()
+    plot_data_1[0] = 0
+    plot_data_1[-1] = 0  # Set the last value to zero for plotting
+
+
+    plt.plot(plot_data_1.real, label='Solution Lambda Data')
+    plt.plot(plot_data_1.imag, label='Imaginary Part of Lambda Data', linestyle='--')
+    plt.title('Solution of the Maxwell Electric Field Boundary Operator')
+    plt.xlabel('Index')
+    plt.ylabel('Value')
+    plt.legend()
+    plt.grid()
+
+    grid.refine()  # Refine the grid for better resolution
 plt.show()
 
