@@ -75,6 +75,9 @@ for i, grid in enumerate(grid_list):
     plot_data_1[-1] = 0  # Set the last value to zero for plotting
 
 
+    element_size = np.max(grid.diameters)
+    plot_data_1 = element_size * plot_data_1
+    
     plt.plot(plot_data_1.real, label='Solution Lambda Data')
     plt.plot(plot_data_1.imag, label='Imaginary Part of Lambda Data', linestyle='--')
     plt.title('Solution of the Maxwell Electric Field Boundary Operator')

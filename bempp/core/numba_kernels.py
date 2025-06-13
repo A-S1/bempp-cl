@@ -2989,7 +2989,7 @@ def  thinwire_efield_singular(
                         nshape_trial * nshape_test * index
                         + test_fun_index * nshape_trial
                         + trial_fun_index
-                    ] += inv4pi * local_result  #* test_edge_lengths[index]
+                    ] += inv4pi * local_result #* test_edge_lengths[index]
         
 
                 
