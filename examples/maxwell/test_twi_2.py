@@ -38,11 +38,17 @@ parameters.fmm.debug = False
 parameters.fmm.dense_evaluation = False
 
 #### Straight wire, define the grid ####
-grid = bempp.api.import_grid("examples/maxwell/line_mesh_long.msh")
+grid_7 = bempp.api.import_grid("examples/maxwell/line_mesh_long_7.msh")
+grid_11 = bempp.api.import_grid("examples/maxwell/line_mesh_long_11.msh")
+grid_15 = bempp.api.import_grid("examples/maxwell/line_mesh_long_15.msh")
+grid_21 = bempp.api.import_grid("examples/maxwell/line_mesh_long_21.msh")
 
-plt.figure(figsize=(10, 6))
-for i in range(5):
+
+
+grid_list = [grid_7, grid_11, grid_15, grid_21]
 #### Define space of Piecewise Linear Functions, with 0 at the boundaries  ####
+
+for i, grid in enumerate(grid_list):
     space = bempp.api.function_space(grid, "PWL", 0, include_boundary_dofs=True)	
 
 
@@ -67,8 +73,11 @@ for i in range(5):
     plot_data_1[1:-1] = lambda_data.copy()
     plot_data_1[0] = 0
     plot_data_1[-1] = 0  # Set the last value to zero for plotting
+    
+    element_size = np.max(grid.diameters)
+    plot_data_1 = plot_data_1 * element_size**2
 
-
+    plt.figure(figsize=(10, 6))
     plt.plot(plot_data_1.real, label='Solution Lambda Data')
     plt.plot(plot_data_1.imag, label='Imaginary Part of Lambda Data', linestyle='--')
     plt.title('Solution of the Maxwell Electric Field Boundary Operator')
@@ -77,6 +86,6 @@ for i in range(5):
     plt.legend()
     plt.grid()
 
-    grid.refine()  # Refine the grid for better resolution
-plt.show()
+
+    plt.show()
 
