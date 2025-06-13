@@ -38,10 +38,16 @@ parameters.fmm.debug = False
 parameters.fmm.dense_evaluation = False
 
 #### Straight wire, define the grid ####
-grid = bempp.api.import_grid("examples/maxwell/line_mesh_long.msh")
+grid7 = bempp.api.import_grid("examples/maxwell/line_mesh_long_7.msh")
+grid11 = bempp.api.import_grid("examples/maxwell/line_mesh_long_11.msh")
+grid15 = bempp.api.import_grid("examples/maxwell/line_mesh_long_15.msh")
+grid21 = bempp.api.import_grid("examples/maxwell/line_mesh_long_21.msh")
+
+grid_list = [grid7, grid11, grid15, grid21]
+
 
 plt.figure(figsize=(10, 6))
-for i in range(5):
+for i, grid in enumerate(grid_list):
 #### Define space of Piecewise Linear Functions, with 0 at the boundaries  ####
     space = bempp.api.function_space(grid, "PWL", 0, include_boundary_dofs=True)	
 
@@ -77,6 +83,6 @@ for i in range(5):
     plt.legend()
     plt.grid()
 
-    grid.refine()  # Refine the grid for better resolution
-plt.show()
+  # Refine the grid for better resolution
+    plt.show()
 

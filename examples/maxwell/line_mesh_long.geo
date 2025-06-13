@@ -11,7 +11,7 @@ Point(2) = {  0, 0, 2, lc };
 Line(1) = { 1, 2 };
 
 // Force 21 nodes (→20 elements) equally spaced along Line 1
-Transfinite Line { 1 } = 11 Using Progression 1;
+Transfinite Line { 1 } = 21 Using Progression 1;
 
 // (Optional) Tag the line as a physical entity
 Physical Line("Segment") = { 1 };
