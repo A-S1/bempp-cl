@@ -79,7 +79,7 @@ for i, grid in enumerate(grid_list):
     max_list.append(np.max(np.abs(lambda_data)))
 
     element_size = np.max(grid.diameters)
-    plot_data_1 = element_size**2 * plot_data_1
+    plot_data_1 = plot_data_1
     
     plt.plot(plot_data_1.real, label='Solution Lambda Data')
     plt.plot(plot_data_1.imag, label='Imaginary Part of Lambda Data', linestyle='--')
