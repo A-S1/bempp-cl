@@ -2790,7 +2790,7 @@ def thinwire_efield_regular_assembler(
         trial_element = trial_elements[trial_element_index]
         for trial_point_index in range(n_quad_points):
             factors[trial_element_index * n_quad_points + trial_point_index] = (
-                quad_weights[trial_point_index] ) * trial_edge_lengths[trial_element]
+                quad_weights[trial_point_index] ) * 1 #trial_edge_lengths[trial_element]
             #)
 
     # --- Main Assembly Loop over Test Elements (Parallelized) ---
@@ -2805,7 +2805,7 @@ def thinwire_efield_regular_assembler(
         test_global_points = test_grid_data.local2global(test_element, quad_points)
         
         # The integration factor for the test element (its segment length)
-        local_test_factor = test_edge_lengths[i]
+        local_test_factor = 1 # test_edge_lengths[i]
 
         # --- Compute the Inner Integral: G(z) = int_L g(z,z') phi(z') dz' for each test quadrature point ---
         
@@ -3352,6 +3352,96 @@ def maxwell_efield_potential(
 
     return result
 
+@_numba.jit(
+    nopython=True, parallel=True, error_model="numpy", fastmath=True, boundscheck=False
+)
+def thinwire_efield_potential(
+    dtype,
+    result_type,
+    kernel_dimension,
+    points,
+    x,
+    grid_data,
+    quad_points,
+    quad_weights,
+    number_of_shape_functions,
+    shapeset_evaluate,
+    kernel_function,
+    kernel_parameters,
+    normal_multipliers,
+    support_elements,
+):
+    """Implement the Maxwell electric field potential."""
+    wavenumber = kernel_parameters[0] + 1j * kernel_parameters[1]
+    dtype = grid_data.vertices.dtype
+    result = _np.zeros((kernel_dimension, points.shape[1]), dtype=result_type)
+    n_support_elements = len(support_elements)
+    number_of_quad_points = len(quad_weights)
+    number_of_points = len(points)
+
+    global_points = _np.zeros(
+        (3, number_of_quad_points * n_support_elements), dtype=dtype
+    )
+
+    basis_functions = get_line_transform(grid_data, support_elements, quad_points)
+
+    edge_lengths = get_edge_lengths_line(grid_data, support_elements)
+
+    tmp1 = _np.zeros((3, number_of_quad_points * n_support_elements), dtype=result_type)
+    tmp2 = _np.zeros(number_of_quad_points * n_support_elements, dtype=result_type)
+
+    for element_index, element in enumerate(support_elements):
+        global_points[
+            :,
+            number_of_quad_points
+            * element_index : number_of_quad_points
+            * (1 + element_index),
+        ] = grid_data.local2global(element, quad_points)
+
+    for element_index, element in enumerate(support_elements):
+        for quad_point_index in range(number_of_quad_points):
+            for fun_index in range(number_of_shape_functions):
+                factor = (
+                    quad_weights[quad_point_index]
+                    * x[number_of_shape_functions * element + fun_index]
+                    * edge_lengths[element_index, fun_index]
+                )
+                tmp1[:, number_of_quad_points * element_index + quad_point_index] += (
+                    factor
+                    * basis_functions[element_index, fun_index, :, quad_point_index]
+                    * grid_data.integration_elements[element]
+                )
+                tmp2[number_of_quad_points * element_index + quad_point_index] += (
+                    2 * factor
+                )
+
+    for point_index in _numba.prange(number_of_points):
+        test_point = points[:, point_index].copy()
+
+        kernel_values = kernel_function(
+            test_point, global_points, None, None, kernel_parameters
+        )
+        diff = test_point.reshape(3, 1) - global_points
+        dist = _np.zeros(number_of_quad_points * n_support_elements, dtype=dtype)
+        for dim in range(3):
+            for index in range(number_of_quad_points * n_support_elements):
+                dist[index] += diff[dim, index] * diff[dim, index]
+        dist = _np.sqrt(dist)
+
+        for dim in range(kernel_dimension):
+            point_result = 0
+            for trial_index in range(number_of_quad_points * n_support_elements):
+                ldist = dist[trial_index]
+                point_result += kernel_values[trial_index] * (
+                    1j * wavenumber * tmp1[dim, trial_index]
+                    - diff[dim, trial_index]
+                    * (1j * wavenumber * ldist - 1)
+                    * tmp2[trial_index]
+                    / (1j * wavenumber * ldist * ldist)
+                )
+            result[dim, point_index] = point_result
+
+    return result
 
 @_numba.jit(
     nopython=True, parallel=True, error_model="numpy", fastmath=True, boundscheck=False
