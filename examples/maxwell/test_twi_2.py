@@ -42,9 +42,11 @@ grid7 = bempp.api.import_grid("examples/maxwell/line_mesh_long_7.msh")
 grid11 = bempp.api.import_grid("examples/maxwell/line_mesh_long_11.msh")
 grid15 = bempp.api.import_grid("examples/maxwell/line_mesh_long_15.msh")
 grid21 = bempp.api.import_grid("examples/maxwell/line_mesh_long_21.msh")
+grid31 = bempp.api.import_grid("examples/maxwell/line_mesh_long_31.msh")
+grid51 = bempp.api.import_grid("examples/maxwell/line_mesh_long_51.msh")
 
-grid_list = [grid7, grid11, grid15, grid21]
-
+grid_list = [grid7, grid11, grid15, grid21, grid31, grid51]
+max_list = []
 
 plt.figure(figsize=(10, 6))
 for i, grid in enumerate(grid_list):
@@ -74,9 +76,10 @@ for i, grid in enumerate(grid_list):
     plot_data_1[0] = 0
     plot_data_1[-1] = 0  # Set the last value to zero for plotting
 
+    max_list.append(np.max(np.abs(lambda_data)))
 
     element_size = np.max(grid.diameters)
-    plot_data_1 = element_size * plot_data_1
+    plot_data_1 = element_size**2 * plot_data_1
     
     plt.plot(plot_data_1.real, label='Solution Lambda Data')
     plt.plot(plot_data_1.imag, label='Imaginary Part of Lambda Data', linestyle='--')
@@ -87,5 +90,7 @@ for i, grid in enumerate(grid_list):
     plt.grid()
 
   # Refine the grid for better resolution
-    plt.show()
+plt.show()
 
+
+print("Max values for each grid size:", max_list)
