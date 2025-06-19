@@ -507,10 +507,7 @@ def helmholtz_single_layer_regular(
         for i in range(3):
             for j in range(npoints):
                 dist[j] += (trial_points[i, j] - test_point[i]) ** 2
-                if type(wire_radius) is _np.ndarray:
-                    dist[j] += wire_radius[j] ** 2
-                else:
-                    dist[j] += wire_radius ** 2
+                dist[j] += wire_radius ** 2
     for j in range(npoints):
         dist[j] = _np.sqrt(dist[j])
     for j in range(npoints):

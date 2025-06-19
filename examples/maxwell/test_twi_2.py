@@ -45,7 +45,7 @@ grid21 = bempp.api.import_grid("examples/maxwell/line_mesh_long_21.msh")
 grid31 = bempp.api.import_grid("examples/maxwell/line_mesh_long_31.msh")
 grid51 = bempp.api.import_grid("examples/maxwell/line_mesh_long_51.msh")
 
-grid_list = [grid7, grid11, grid15, grid21, grid31, grid51]
+grid_list = [grid7]#, grid11, grid15, grid21, grid31, grid51]
 max_list = []
 
 plt.figure(figsize=(10, 6))
@@ -112,7 +112,18 @@ plt.grid(True)
 plt.tight_layout()
 
     # Refine the grid for better resolution
-plt.show()
+# plt.show()
+
+nx = 300
+nz = 300
+extent = 3
+x, y, z = np.mgrid[-extent : extent : nx * 1j, 0:0:1j, -extent : extent : nz * 1j]
+points = np.vstack((x.ravel(), y.ravel(), z.ravel()))
+# -
+
+# We now initialise the electric field potential operator.
+
+slp_pot = bempp.api.operators.potential.maxwell.electric_field(space, points, k)
 
 
 print("Max values for each grid size:", max_list)
