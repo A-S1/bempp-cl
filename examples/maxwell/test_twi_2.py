@@ -55,7 +55,7 @@ for i, grid in enumerate(grid_list):
 
 
     coeffs = np.zeros(space.global_dof_count-2, dtype=np.complex128)
-    coeffs[(space.global_dof_count-2)//2] = 5  # Set the central impulse
+    coeffs[(space.global_dof_count-2)//2] =  1/np.max(grid.diameters)  # Set the central impulse
 
 
 
@@ -79,17 +79,39 @@ for i, grid in enumerate(grid_list):
     max_list.append(np.max(np.abs(lambda_data)))
 
     element_size = np.max(grid.diameters)
-    plot_data_1 = plot_data_1
-    
-    plt.plot(plot_data_1.real, label='Solution Lambda Data')
-    plt.plot(plot_data_1.imag, label='Imaginary Part of Lambda Data', linestyle='--')
-    plt.title('Solution of the Maxwell Electric Field Boundary Operator')
-    plt.xlabel('Index')
-    plt.ylabel('Value')
-    plt.legend()
-    plt.grid()
 
-  # Refine the grid for better resolution
+    N = len(plot_data_1)
+    h = 2.0/(N-1)
+    x_nodes = np.linspace(-1, 1, N)
+    x_plot = np.linspace(-1, 1, 500)
+
+    # Compute weighted sum of hat functions
+    y = np.zeros_like(x_plot, dtype=complex)
+    for n in range(N):
+        f_n = np.maximum((1 - np.abs((x_plot - x_nodes[n])) / h), 0)
+        y += plot_data_1[n] * f_n
+
+    # Absolute real and imaginary parts
+    y_real_abs =  np.abs(y.real)
+    y_imag_abs =  np.abs(y.imag)
+
+    # max_value = np.max(y_real_abs)
+    # y_real_abs /= max_value
+
+    # Plot
+    plt.plot(x_plot, y_real_abs, label='|Re(I(z))|', linewidth=2)
+    plt.plot(x_plot, y_imag_abs, label='|Im(I(z))|', linestyle='--', linewidth=2)
+
+plt.xlim(-1, 1)
+plt.ylim(bottom=0)
+plt.xlabel('z')
+plt.ylabel('current')
+plt.title('Current Distribution for Small Dipole Antenna')
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+
+    # Refine the grid for better resolution
 plt.show()
 
 

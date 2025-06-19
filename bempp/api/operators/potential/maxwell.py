@@ -49,7 +49,7 @@ def electric_field(
         operator_descriptor = OperatorDescriptor(
             "maxwell_electric_field_potential",  # Identifier
             [_np.real(wavenumber), _np.imag(wavenumber)],  # Options
-            "helmholtz_single_layer",  # Kernel type
+            "thinwire_helmholtz_potential",  # Kernel type
             "maxwell_electric_field_thinwire",  # Assembly type
             precision,  # Precision
             True,  # Is complex

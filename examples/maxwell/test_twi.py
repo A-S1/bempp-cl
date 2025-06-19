@@ -7,9 +7,9 @@ k = 2 * np.pi / wavelength
 
 # grid_surface = bempp.api.import_grid("examples/maxwell/plane2.msh")
 
-grid = bempp.api.import_grid("examples/maxwell/line_mesh_L.msh")
+grid = bempp.api.import_grid("examples/maxwell/line_mesh.msh")
 
-grid2 = bempp.api.import_grid("examples/maxwell/line_mesh_rotated.msh")
+grid2 = bempp.api.import_grid("examples/maxwell/line_mesh_L.msh")
 # grid.plot()
 
 if hasattr(grid, 'line_mask'):
@@ -64,15 +64,10 @@ parameters.fmm.dense_evaluation = False
 space = bempp.api.function_space(grid, "PWL", 0)
 space2 = bempp.api.function_space(grid2, "PWL", 0)
 
-@bempp.api.complex_callable
-def fun(x, n, domain_index, result):
-    """Incident field function."""
-    result[:] = np.array([np.exp(1j * k * x[2]), 0.0 * x[2], 0.0 * x[2]])
-
-trace_fun = bempp.api.GridFunction(space, fun=fun, dual_space=space)
 
 elec = bempp.api.operators.boundary.maxwell.electric_field(space, space, space, k, parameters=parameters)
 elec2 = bempp.api.operators.boundary.maxwell.electric_field(space2, space2, space2, k, parameters=parameters)
+
 mat = elec.weak_form().to_dense()
 mat2 = elec2.weak_form().to_dense()
 
@@ -92,14 +87,13 @@ error_list = []
 
 for order in testing_quad_order:
     parameters.quadrature.singular = order
-    parameters.quadrature.regular = order
-
+    parameters.quadrature.regular = 4
     elec = bempp.api.operators.boundary.maxwell.electric_field(space, space, space, k, parameters=parameters)
     mat = elec.weak_form().to_dense()
     mat_norm = np.linalg.norm(mat)
     norm_list.append(mat_norm)
 
-    error = np.abs(mat_norm - mat_norm_ref)
+    error = np.abs(mat_norm - mat_norm_ref)/mat_norm_ref
     error_list.append(error)
 
 
@@ -120,25 +114,3 @@ plt.tight_layout()
 
 plt.show()
 
-
-
-# elec_surface = bempp.api.operators.boundary.maxwell.electric_field(spce_surface_domain, spce_surface_domain, spce_surface_range, k)
-
-# mat_surface = elec_surface.weak_form().to_dense()
-# print("surface matrix =", mat_surface)
-
-
-mat = elec.weak_form().to_dense()
-print("matrix =", mat)
-
-mat_norm = np.linalg.norm(mat)
-print("matrix norm =", mat_norm)
-
-
-# print("line elements =", line_elements)
-# print("junction elements =", junc_elements)
-
-# print("all elements =", grid.elements)
-# print("grid type =", grid.type)
-
-# print("efie operator =", elec)

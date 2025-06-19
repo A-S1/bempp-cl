@@ -196,13 +196,20 @@ def potential_assembler(
     """Return an evaluator function to evaluate a potential."""
     from bempp.core.numba_kernels import select_numba_kernels
     from bempp.api.integration.triangle_gauss import rule
+    from bempp.api.integration.gauss import rule as line_rule
     from bempp.api.utils.helpers import get_type
 
     (numba_assembly_function, numba_kernel_function_regular) = select_numba_kernels(
         operator_descriptor, mode="potential"
     )
 
-    quad_points, quad_weights = rule(parameters.quadrature.regular)
+    if "line" in space.grid.type.lower():
+        # Use line quadrature rule
+        quad_points, quad_weights = line_rule(parameters.quadrature.regular)
+
+    elif "triangle" in space.grid.type.lower():
+        # Use triangle quadrature rule
+        quad_points, quad_weights = rule(parameters.quadrature.regular)
 
     # Perform Numba assembly always in double precision
     # precision = operator_descriptor.precision
