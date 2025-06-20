@@ -153,10 +153,6 @@ def get_line_transform(grid_data, elements, local_points, local_multipliers):
 
         # apply local multipliers to the scalars
        
-
-        m0 = 1 / local_multipliers[element_index, 0]
-        m1 = 1 / local_multipliers[element_index, 1]
-
         
         for qp in range(npoints):
             phi0 = (1 - s[qp]) 
