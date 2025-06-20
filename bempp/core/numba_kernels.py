@@ -3417,9 +3417,7 @@ def thinwire_efield_potential(
     )
 
     basis_functions = get_line_transform(grid_data, support_elements, quad_points, None)
-    divergence_basis = get_divergence_line(grid_data, support_elements, quad_points, None)
-
- 
+     
     edge_lengths = get_edge_lengths_line(grid_data, support_elements)
 
     tmp1 = _np.zeros((3, number_of_quad_points * n_support_elements), dtype=result_type)
@@ -3438,7 +3436,7 @@ def thinwire_efield_potential(
                 factor = (
                     quad_weights[quad_point_index]
                     * x[number_of_shape_functions * element + fun_index]
-                    * edge_lengths[element_index, fun_index]
+                    * edge_lengths[element_index]
                 )
                 tmp1[:, number_of_quad_points * element_index + quad_point_index] += (
                     factor
