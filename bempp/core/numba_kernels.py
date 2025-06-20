@@ -550,7 +550,7 @@ def thinwire_helmholtz_potential(
     npoints = trial_points.shape[1]
     dtype = trial_points.dtype
     dist = _np.zeros(npoints, dtype=dtype)
-    output = _np.zeros(npoints, dtype=dtype)
+    output = _np.zeros(npoints, dtype=_np.complex128)
     m_inv_4pi = dtype.type(M_INV_4PI)
     
     if wire_radius is None:

@@ -129,6 +129,7 @@ points = np.vstack((x.ravel(), y.ravel(), z.ravel()))
 current = lu(elec, rhs)
 slp_pot = bempp.api.operators.potential.maxwell.electric_field(space, points, k)
 scattered_field = -slp_pot * current
-scattered_field = scattered_field.evaluate(points)
+print("Scattered field shape:", scattered_field.shape)
+# scattered_field = scattered_field.evaluate(points)
 
 print("Max values for each grid size:", max_list)
