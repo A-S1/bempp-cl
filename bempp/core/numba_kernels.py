@@ -559,13 +559,13 @@ def thinwire_helmholtz_potential(
     for i in range(3):
         for j in range(npoints):
             dist[j] += (trial_points[i, j] - test_point[i]) ** 2
-            dist[j] += wire_radius ** 2
+            dist[j] += wire_radius[j] ** 2
 
     for j in range(npoints):
         dist[j] = _np.sqrt(dist[j])
 
     for j in range(npoints):
-        output[j] = _np.exp(-1j * wavenumber * dist[j]) * m_inv_4pi / dist[j]**5 * ((1 + 1j * dist[j]) * (2 * dist[j] ** 2 - 3 * wire_radius**2) + (wavenumber * wire_radius * dist[j])**2 ) 
+        output[j] = _np.exp(-1j * wavenumber * dist[j]) * m_inv_4pi / dist[j]**5 * ((1 + 1j * dist[j]) * (2 * dist[j] ** 2 - 3 * wire_radius[j]**2) + (wavenumber * wire_radius[j] * dist[j])**2 ) 
 
     return output  
 
@@ -3450,7 +3450,7 @@ def thinwire_efield_potential(
         test_point = points[:, point_index].copy()
 
         kernel_values = kernel_function(
-            test_point, global_points, None, None, kernel_parameters, wire_radius_point[point_index]
+            test_point, global_points, None, None, kernel_parameters, wire_radius_point
         )
         diff = test_point.reshape(3, 1) - global_points
         dist = _np.zeros(number_of_quad_points * n_support_elements, dtype=dtype)
