@@ -566,7 +566,8 @@ def thinwire_helmholtz_potential(
 
     for j in range(npoints):
         output[j] = _np.exp(-1j * wavenumber * dist[j]) * m_inv_4pi / dist[j]**5 * ((1 + 1j * dist[j]) * (2 * dist[j] ** 2 - 3 * wire_radius**2) + (wavenumber * wire_radius * dist[j])**2 ) 
-       
+
+    return output  
 
     
     
