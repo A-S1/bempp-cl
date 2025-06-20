@@ -58,9 +58,13 @@ for i, grid in enumerate(grid_list):
     coeffs[(space.global_dof_count-2)//2] =  1/np.max(grid.diameters)  # Set the central impulse
 
 
+    coeffs2 = np.zeros(space.global_dof_count, dtype=np.complex128)
+    coeffs2[1:-1] = coeffs.copy()  # Copy coefficients to the interior dofs
+    coeffs2[0] = 0  # Set the first value to zero
+    coeffs2[-1] = 0  # Set the last value
 
     elec = bempp.api.operators.boundary.maxwell.electric_field(space, space, space, k, parameters=parameters)
-    rhs = bempp.api.GridFunction(space, coefficients=coeffs, parameters=parameters)
+    rhs = bempp.api.GridFunction(space, coefficients=coeffs2, parameters=parameters)
 
 
     #### Solve the system using LU decomposition ####
@@ -122,8 +126,9 @@ points = np.vstack((x.ravel(), y.ravel(), z.ravel()))
 # -
 
 # We now initialise the electric field potential operator.
-
+current = lu(elec, rhs)
 slp_pot = bempp.api.operators.potential.maxwell.electric_field(space, points, k)
-
+scattered_field = -slp_pot * current
+scattered_field = scattered_field.evaluate(points)
 
 print("Max values for each grid size:", max_list)

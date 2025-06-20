@@ -3423,8 +3423,8 @@ def thinwire_efield_potential(
         (3, number_of_quad_points * n_support_elements), dtype=dtype
     )
 
-    basis_functions = get_line_transform(grid_data, support_elements, quad_points)
-    divergence_basis = get_divergence_line(grid_data, support_elements, quad_points)
+    basis_functions = get_line_transform(grid_data, support_elements, quad_points, None)
+    divergence_basis = get_divergence_line(grid_data, support_elements, quad_points, None)
 
  
     edge_lengths = get_edge_lengths_line(grid_data, support_elements)
