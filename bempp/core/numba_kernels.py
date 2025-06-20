@@ -178,9 +178,6 @@ def get_divergence_line(grid_data, elements, local_points, local_multipliers):
     nelements = len(elements)
     result = _np.zeros((nelements, 2, npoints), dtype=local_points.dtype)
 
-    m0 = local_multipliers[:, 0]
-    m1 = local_multipliers[:, 1]
-
     for element_index in _numba.prange(nelements):
         element = elements[element_index]
         # end‐points
