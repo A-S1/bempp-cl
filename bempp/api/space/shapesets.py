@@ -130,6 +130,7 @@ def _snc0_shapeset_gradient(local_coordinates):
     grad[0] = - temp[1]
     grad[1] = temp[0]
     return grad
+
 @_numba.njit
 def _pwl0_shapeset_evaluate(local_coordinates):
     """

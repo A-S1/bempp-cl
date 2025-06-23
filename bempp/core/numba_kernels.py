@@ -2817,7 +2817,7 @@ def thinwire_efield_regular_assembler(
         trial_element = trial_elements[trial_element_index]
         for trial_point_index in range(n_quad_points):
             factors[trial_element_index * n_quad_points + trial_point_index] = (
-                quad_weights[trial_point_index] ) * trial_edge_lengths[trial_element]
+                quad_weights[trial_point_index] ) / trial_edge_lengths[trial_element]
             #)
 
     # --- Main Assembly Loop over Test Elements (Parallelized) ---
@@ -2832,7 +2832,7 @@ def thinwire_efield_regular_assembler(
         test_global_points = test_grid_data.local2global(test_element, quad_points)
         
         # The integration factor for the test element (its segment length)
-        local_test_factor =  test_edge_lengths[i]
+        local_test_factor =  1 / test_edge_lengths[i]
 
         # --- Compute the Inner Integral: G(z) = int_L g(z,z') phi(z') dz' for each test quadrature point ---
         
@@ -2879,7 +2879,7 @@ def thinwire_efield_regular_assembler(
                     for trial_fun_index in range(nshape_trial):
                         for quad_point_index in range(n_quad_points):
                             integrand = (_np.dot(test_basis_functions[i, test_fun_index, :, test_point_index], trial_basis_functions[trial_element_index, trial_fun_index, :, quad_point_index]) -
-                                        1/ k2 * (test_basis_divergence[i, test_fun_index, test_point_index] * trial_basis_divergence[trial_element_index, trial_fun_index, quad_point_index]) )* kernel_values[trial_element_index * n_quad_points + quad_point_index]
+                                        1/ k2 * (test_basis_divergence[i, test_fun_index, test_point_index] * trial_basis_divergence[trial_element_index, trial_fun_index, quad_point_index]) ) * kernel_values[trial_element_index * n_quad_points + quad_point_index]
                             local_result[trial_element_index, test_fun_index, trial_fun_index] += integrand * (quad_weights[test_point_index] * local_test_factor * factors[trial_element_index * n_quad_points + quad_point_index])
 
 
@@ -3016,7 +3016,7 @@ def  thinwire_efield_singular(
                         nshape_trial * nshape_test * index
                         + test_fun_index * nshape_trial
                         + trial_fun_index
-                    ] += inv4pi * local_result #* test_edge_lengths[index]
+                    ] +=  inv4pi * local_result 
         
 
                 
