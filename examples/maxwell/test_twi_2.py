@@ -69,11 +69,14 @@ for i, grid in enumerate(grid_list):
 
     #### Solve the system using LU decomposition ####
     from bempp.api.linalg import lu
+    N = space.global_dof_count
+    h = 2.0/(N-1)
 
     mat = elec.weak_form().to_dense()
     mat = mat[2:, 2:]  # Extract the relevant part of the matrix
 
     lambda_data = np.linalg.solve(mat, coeffs)
+
 
     plot_data_1 = np.zeros(space.global_dof_count, dtype=np.complex128)
     plot_data_1[1:-1] = lambda_data.copy()
@@ -84,15 +87,14 @@ for i, grid in enumerate(grid_list):
 
     element_size = np.max(grid.diameters)
 
-    N = len(plot_data_1)
-    h = 2.0/(N-1)
+    
     x_nodes = np.linspace(-1, 1, N)
     x_plot = np.linspace(-1, 1, 500)
 
     # Compute weighted sum of hat functions
     y = np.zeros_like(x_plot, dtype=complex)
     for n in range(N):
-        f_n = np.maximum((1 - np.abs((x_plot - x_nodes[n])) / h), 0)
+        f_n = np.maximum((1 - np.abs((x_plot - x_nodes[n])) / h), 0) * h 
         y += plot_data_1[n] * f_n
 
     # Absolute real and imaginary parts
