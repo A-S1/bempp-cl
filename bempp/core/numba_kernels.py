@@ -508,15 +508,17 @@ def helmholtz_single_layer_regular(
                 for j in range(npoints):
                     output_real[j] *= _np.exp(-wavenumber_imag * dist[j])
                     output_imag[j] *= _np.exp(-wavenumber_imag * dist[j])
-        return output_real + 1j * output_imag         
-    else:
-        for i in range(3):
-            for j in range(npoints):
-                dist[j] += (trial_points[i, j] - test_point[i]) 
-                dist[j] += wire_radius ** 2
-                dist[j] = _np.sqrt(dist[j])
+            return output_real + 1j * output_imag         
+    else:  
+        for j in range(npoints):
+            for i in range(3):
+                dist[j] += (trial_points[i, j] - test_point[i]) ** 2
+                
+            dist[j] = _np.sqrt(dist[j])
+            dist[j] += wire_radius ** 2
+        
 
-                output_wire[j] = _np.exp(-1j * wavenumber_real * dist[j]) * m_inv_4pi / dist[j]
+            output_wire[j] = _np.exp(-1j * wavenumber_real * dist[j]) * m_inv_4pi / dist[j]
         return output_wire
     
 
