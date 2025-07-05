@@ -491,26 +491,34 @@ def helmholtz_single_layer_regular(
     dist = _np.zeros(npoints, dtype=dtype)
     output_real = _np.zeros(npoints, dtype=dtype)
     output_imag = _np.zeros(npoints, dtype=dtype)
+
+    output_wire = _np.zeros(npoints, dtype=_np.complex128)
+
     m_inv_4pi = dtype.type(M_INV_4PI)
     if wire_radius is None:
         for i in range(3):
             for j in range(npoints):
-                dist[j] += (trial_points[i, j] - test_point[i]) ** 2
+                dist[j] += (trial_points[i, j] - test_point[i]) ** 2  
+            for j in range(npoints):
+                dist[j] = _np.sqrt(dist[j])
+            for j in range(npoints):
+                output_real[j] = _np.cos(wavenumber_real * dist[j]) * m_inv_4pi / dist[j]
+                output_imag[j] = _np.sin(wavenumber_real * dist[j]) * m_inv_4pi / dist[j]
+            if wavenumber_imag != 0:
+                for j in range(npoints):
+                    output_real[j] *= _np.exp(-wavenumber_imag * dist[j])
+                    output_imag[j] *= _np.exp(-wavenumber_imag * dist[j])
+        return output_real + 1j * output_imag         
     else:
         for i in range(3):
             for j in range(npoints):
                 dist[j] += (trial_points[i, j] - test_point[i]) ** 2
                 dist[j] += wire_radius ** 2
-    for j in range(npoints):
-        dist[j] = _np.sqrt(dist[j])
-    for j in range(npoints):
-        output_real[j] = _np.cos(wavenumber_real * dist[j]) * m_inv_4pi / dist[j]
-        output_imag[j] = _np.sin(wavenumber_real * dist[j]) * m_inv_4pi / dist[j]
-    if wavenumber_imag != 0:
-        for j in range(npoints):
-            output_real[j] *= _np.exp(-wavenumber_imag * dist[j])
-            output_imag[j] *= _np.exp(-wavenumber_imag * dist[j])
-    return output_real + 1j * output_imag
+                dist[j] = _np.sqrt(dist[j])
+
+                output_wire[j] = _np.exp(-1j * wavenumber_real * dist[j]) * m_inv_4pi / dist[j]
+        return output_wire
+    
 
 @_numba.jit(
     nopython=True, parallel=False, error_model="numpy", fastmath=True, boundscheck=False
@@ -2784,8 +2792,6 @@ def thinwire_efield_regular_assembler(
     # --- Setup ---
 
     wavenumber = kernel_parameters[0] + 1j * kernel_parameters[1]
-
-    print("Using wavenumber:", wavenumber)
     k2 = wavenumber * wavenumber	
 
 

@@ -54,8 +54,10 @@ plt.figure(figsize=(10, 6))
 for i, grid in enumerate(grid_list):
 #### Define space of Piecewise Linear Functions, with 0 at the boundaries  #### 
     for j in range(len(k_list)):
+
         
         k = k_list[j]  # Use the corresponding wave number for the grid
+        print(f"Processing grid {i+1} with wave number {k:.2f}")
         space = bempp.api.function_space(grid, "PWL", 0, include_boundary_dofs=True)	
 
 
