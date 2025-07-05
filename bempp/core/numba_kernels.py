@@ -516,6 +516,7 @@ def helmholtz_single_layer_regular(
                 
             dist[j] = _np.sqrt(dist[j])
             dist[j] += wire_radius ** 2
+            dist[j] = _np.sqrt(dist[j])
         
 
             output_wire[j] = _np.exp(-1j * wavenumber_real * dist[j]) * m_inv_4pi / dist[j]
