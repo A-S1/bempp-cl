@@ -2784,7 +2784,10 @@ def thinwire_efield_regular_assembler(
     # --- Setup ---
 
     wavenumber = kernel_parameters[0] + 1j * kernel_parameters[1]
+
+    print("Using wavenumber:", wavenumber)
     k2 = wavenumber * wavenumber	
+
 
     result_type = result.dtype
     n_quad_points = len(quad_weights)

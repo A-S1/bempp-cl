@@ -45,68 +45,73 @@ grid21 = bempp.api.import_grid("examples/maxwell/line_mesh_long_21.msh")
 grid31 = bempp.api.import_grid("examples/maxwell/line_mesh_long_31.msh")
 grid51 = bempp.api.import_grid("examples/maxwell/line_mesh_long_51.msh")
 
-grid_list = [grid7, grid11, grid15, grid21, grid31, grid51]
+grid_list = [grid15]  #grid7, grid11, grid15, grid21, grid31, grid51]
 max_list = []
+
+k_list = [k, k/2, k/3, k/4, k/5, k/6]  # Different wave numbers for each grid
 
 plt.figure(figsize=(10, 6))
 for i, grid in enumerate(grid_list):
-#### Define space of Piecewise Linear Functions, with 0 at the boundaries  ####
-    space = bempp.api.function_space(grid, "PWL", 0, include_boundary_dofs=True)	
+#### Define space of Piecewise Linear Functions, with 0 at the boundaries  #### 
+    for j in range(len(k_list)):
+        
+        k = k_list[j]  # Use the corresponding wave number for the grid
+        space = bempp.api.function_space(grid, "PWL", 0, include_boundary_dofs=True)	
 
 
-    coeffs = np.zeros(space.global_dof_count-2, dtype=np.complex128)
-    coeffs[(space.global_dof_count-2)//2] =  1/np.max(grid.diameters)  # Set the central impulse
+        coeffs = np.zeros(space.global_dof_count-2, dtype=np.complex128)
+        coeffs[(space.global_dof_count-2)//2] =  1/np.max(grid.diameters)  # Set the central impulse
 
 
-    coeffs2 = np.zeros(space.global_dof_count, dtype=np.complex128)
-    coeffs2[1:-1] = coeffs.copy()  # Copy coefficients to the interior dofs
-    coeffs2[0] = 0  # Set the first value to zero
-    coeffs2[-1] = 0  # Set the last value
+        coeffs2 = np.zeros(space.global_dof_count, dtype=np.complex128)
+        coeffs2[1:-1] = coeffs.copy()  # Copy coefficients to the interior dofs
+        coeffs2[0] = 0  # Set the first value to zero
+        coeffs2[-1] = 0  # Set the last value
 
-    elec = bempp.api.operators.boundary.maxwell.electric_field(space, space, space, k, parameters=parameters)
-    rhs = bempp.api.GridFunction(space, coefficients=coeffs2, parameters=parameters)
-
-
-    #### Solve the system using LU decomposition ####
-    from bempp.api.linalg import lu
-    N = space.global_dof_count
-    h = 2.0/(N-1)
-
-    mat = elec.weak_form().to_dense()
-    mat = mat[2:, 2:]  # Extract the relevant part of the matrix
-
-    lambda_data = np.linalg.solve(mat, coeffs)
+        elec = bempp.api.operators.boundary.maxwell.electric_field(space, space, space, k, parameters=parameters)
+        rhs = bempp.api.GridFunction(space, coefficients=coeffs2, parameters=parameters)
 
 
-    plot_data_1 = np.zeros(space.global_dof_count, dtype=np.complex128)
-    plot_data_1[1:-1] = lambda_data.copy()
-    plot_data_1[0] = 0
-    plot_data_1[-1] = 0  # Set the last value to zero for plotting
+        #### Solve the system using LU decomposition ####
+        from bempp.api.linalg import lu
+        N = space.global_dof_count
+        h = 2.0/(N-1)
 
-    max_list.append(np.max(np.abs(lambda_data)))
+        mat = elec.weak_form().to_dense()
+        mat = mat[2:, 2:]  # Extract the relevant part of the matrix
 
-    element_size = np.max(grid.diameters)
+        lambda_data = np.linalg.solve(mat, coeffs)
 
-    
-    x_nodes = np.linspace(-1, 1, N)
-    x_plot = np.linspace(-1, 1, 500)
 
-    # Compute weighted sum of hat functions
-    y = np.zeros_like(x_plot, dtype=complex)
-    for n in range(N):
-        f_n = np.maximum((1 - np.abs((x_plot - x_nodes[n])) / h), 0) * h 
-        y += plot_data_1[n] * f_n
+        plot_data_1 = np.zeros(space.global_dof_count, dtype=np.complex128)
+        plot_data_1[1:-1] = lambda_data.copy()
+        plot_data_1[0] = 0
+        plot_data_1[-1] = 0  # Set the last value to zero for plotting
 
-    # Absolute real and imaginary parts
-    y_real_abs =  np.abs(y.real)
-    y_imag_abs =  np.abs(y.imag)
+        max_list.append(np.max(np.abs(lambda_data)))
 
-    # max_value = np.max(y_real_abs)
-    # y_real_abs /= max_value
+        element_size = np.max(grid.diameters)
 
-    # Plot
-    plt.plot(x_plot, y_real_abs, label='|Re(I(z))|', linewidth=2)
-    plt.plot(x_plot, y_imag_abs, label='|Im(I(z))|', linestyle='--', linewidth=2)
+        
+        x_nodes = np.linspace(-1, 1, N)
+        x_plot = np.linspace(-1, 1, 500)
+
+        # Compute weighted sum of hat functions
+        y = np.zeros_like(x_plot, dtype=complex)
+        for n in range(N):
+            f_n = np.maximum((1 - np.abs((x_plot - x_nodes[n])) / h), 0) * h 
+            y += plot_data_1[n] * f_n
+
+        # Absolute real and imaginary parts
+        y_real_abs =  np.abs(y.real)
+        y_imag_abs =  np.abs(y.imag)
+
+        # max_value = np.max(y_real_abs)
+        # y_real_abs /= max_value
+
+        # Plot
+        plt.plot(x_plot, y_real_abs, label='|Re(I(z))|', linewidth=2)
+        plt.plot(x_plot, y_imag_abs, label='|Im(I(z))|', linestyle='--', linewidth=2)
 
 plt.xlim(-1, 1)
 plt.ylim(bottom=0)
@@ -132,6 +137,18 @@ current = lu(elec, rhs)
 slp_pot = bempp.api.operators.potential.maxwell.electric_field(space, points, k)
 scattered_field = -slp_pot * current
 print("Scattered field shape:", scattered_field.shape)
-# scattered_field = scattered_field.evaluate(points)
+print("max scattered field value:", np.max(np.abs(scattered_field)))
+# scattered_field = scattered_field.evaluate(points)'
+# Reshape to match the grid dimensions
+#plot the values at each point
+plt.figure(figsize=(10, 6))
+plt.imshow(np.abs(scattered_field.reshape(nx, nz)), extent=(-extent, extent, -extent, extent), origin='lower', cmap='viridis')
+plt.colorbar(label='|Sc attered Field|')
+plt.title('Scattered Field Magnitude')
+plt.xlabel('x')
+plt.ylabel('z')
+plt.grid(True)
+plt.tight_layout()
+plt.show()
 
 print("Max values for each grid size:", max_list)

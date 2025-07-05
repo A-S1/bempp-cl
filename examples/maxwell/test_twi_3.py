@@ -10,7 +10,7 @@ grid = bempp.api.import_grid("examples/maxwell/transmission_line_mesh.msh")
 space = bempp.api.function_space(grid, "PWL", 0)
 elec = bempp.api.operators.boundary.maxwell.electric_field(space, space, space, k)
 
-mat_elec = elec.weak_form()
+mat_elec = elec.weak_form().to_dense()
 
 identity = bempp.api.operators.boundary.sparse.identity(space, space, space)
 mat_id = identity.weak_form().to_dense()
