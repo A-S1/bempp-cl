@@ -1,8 +1,9 @@
 import bempp.api
 import numpy as np
 import matplotlib.pyplot as plt
+from fractions import Fraction
 
-wavelength = 50
+wavelength = 6
 k = 2 * np.pi / wavelength
 
 from types import SimpleNamespace
@@ -45,24 +46,25 @@ grid21 = bempp.api.import_grid("examples/maxwell/line_mesh_long_21.msh")
 grid31 = bempp.api.import_grid("examples/maxwell/line_mesh_long_31.msh")
 grid51 = bempp.api.import_grid("examples/maxwell/line_mesh_long_51.msh")
 
-grid_list = [grid15]  #grid7, grid11, grid15, grid21, grid31, grid51]
+grid_list = [grid7, grid11, grid15, grid21, grid31, grid51]
 max_list = []
-
-k_list = [k, k/2, k/3, k/4, k/5, k/6]  # Different wave numbers for each grid
+wavelength = 60
+wavelength_list = [60]#, 32, 20, 12, 8]
+  # Different wave numbers for each grid
 
 plt.figure(figsize=(10, 6))
 for i, grid in enumerate(grid_list):
 #### Define space of Piecewise Linear Functions, with 0 at the boundaries  #### 
-    for j in range(len(k_list)):
+    for j in range(len(wavelength_list)):
 
         
-        k = k_list[j]  # Use the corresponding wave number for the grid
+        k = 2*np.pi / wavelength_list[j]  # Use the corresponding wave number for the grid
         print(f"Processing grid {i+1} with wave number {k:.2f}")
         space = bempp.api.function_space(grid, "PWL", 0, include_boundary_dofs=True)	
 
 
         coeffs = np.zeros(space.global_dof_count-2, dtype=np.complex128)
-        coeffs[(space.global_dof_count-2)//2] =  1/np.max(grid.diameters)  # Set the central impulse
+        coeffs[(space.global_dof_count-2)//2] =  1 /np.max(grid.diameters)  # Set the central impulse
 
 
         coeffs2 = np.zeros(space.global_dof_count, dtype=np.complex128)
@@ -110,10 +112,14 @@ for i, grid in enumerate(grid_list):
 
         # max_value = np.max(y_real_abs)
         # y_real_abs /= max_value
-
+        y_magnitude = np.abs(y)
         # Plot
-        plt.plot(x_plot, y_real_abs, label='|Re(I(z))|', linewidth=2)
-        plt.plot(x_plot, y_imag_abs, label='|Im(I(z))|', linestyle='--', linewidth=2)
+        wavelength_ratio = Fraction(wavelength_list[j] / 4)
+        plt.plot(x_plot, y_magnitude, linewidth=2, label=f'Grid {i+1}, λ = {wavelength_ratio:}L')
+        # plt.plot(x_plot, y_imag_abs, label='|Im(I(z))|', linestyle='--', linewidth=2)
+
+        print("impedance:", h/np.max(np.abs(y_real_abs)))
+        
 
 plt.xlim(-1, 1)
 plt.ylim(bottom=0)
@@ -127,8 +133,8 @@ plt.tight_layout()
     # Refine the grid for better resolution
 plt.show()
 
-nx = 300
-nz = 300
+nx = 30
+nz = 30
 extent = 3
 x, y, z = np.mgrid[-extent : extent : nx * 1j, 0:0:1j, -extent : extent : nz * 1j]
 points = np.vstack((x.ravel(), y.ravel(), z.ravel()))

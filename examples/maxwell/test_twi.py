@@ -7,7 +7,7 @@ k = 2 * np.pi / wavelength
 
 # grid_surface = bempp.api.import_grid("examples/maxwell/plane2.msh")
 
-grid = bempp.api.import_grid("examples/maxwell/line_mesh.msh")
+grid = bempp.api.import_grid("examples/maxwell/line_mesh_short.msh")
 
 grid2 = bempp.api.import_grid("examples/maxwell/line_mesh_L.msh")
 # grid.plot()
@@ -61,8 +61,8 @@ parameters.fmm.dense_evaluation = False
 
 
 
-space2 = bempp.api.function_space(grid, "PWL", 0)
-space = bempp.api.function_space(grid2, "PWL", 0)
+space = bempp.api.function_space(grid, "PWL", 0)
+space2 = bempp.api.function_space(grid2, "PWL", 0)
 
 
 elec = bempp.api.operators.boundary.maxwell.electric_field(space, space, space, k, parameters=parameters)
@@ -80,16 +80,17 @@ mat_norm_ref = np.linalg.norm(mat)
 testing_quad_order = np.arange(2, 30, 1)
 norm_list = []
 
-error_list = []
+
 
 reg_order_list = [4, 8, 16]
 
 plt.figure(figsize=(10, 6))
 for reg_order in reg_order_list:
+    error_list = []
     parameters.quadrature.regular = reg_order
     for order in testing_quad_order:
         parameters.quadrature.singular = order
-        parameters.quadrature.regular = order
+        parameters.quadrature.regular = reg_order
         elec = bempp.api.operators.boundary.maxwell.electric_field(space, space, space, k, parameters=parameters)
         mat = elec.weak_form().to_dense()
         mat_norm = np.linalg.norm(mat)
@@ -98,20 +99,21 @@ for reg_order in reg_order_list:
         error = np.abs(mat_norm - mat_norm_ref) / mat_norm_ref
         error_list.append(error)
 
-    plt.plot(testing_quad_order, norm_list, label=f"Regular Order {reg_order}")
+    plt.plot(testing_quad_order, error_list, label=f"Regular Order {reg_order}")
 
 
 # plt.plot(testing_quad_order, norm_list)
-plt.xlabel("Quadrature Order")
-plt.ylabel("Matrix Norm")
-plt.title("Matrix Norm vs Quadrature Order")
+# plt.xlabel("Quadrature Order")
+# plt.ylabel("Matrix Norm")
+# plt.title("Matrix Norm vs Quadrature Order")
 
-plt.figure()
-plt.plot(testing_quad_order, error_list)
+# plt.figure()
+# plt.plot(testing_quad_order, error_list)
 plt.xlabel("Quadrature Order")
 plt.ylabel("Error")
 plt.title("Error vs Quadrature Order")
 plt.yscale("log")
+plt.legend()
 plt.grid()
 plt.tight_layout()
 
