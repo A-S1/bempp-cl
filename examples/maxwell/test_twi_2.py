@@ -49,7 +49,7 @@ grid51 = bempp.api.import_grid("examples/maxwell/line_mesh_long_51.msh")
 grid_list = [grid7, grid11, grid15, grid21, grid31, grid51]
 max_list = []
 
-wavelength_list = [60] # Different wave numbers for each grid
+wavelength_list = [8] # Different wave numbers for each grid
 
 plt.figure(figsize=(10, 6))
 for i, grid in enumerate(grid_list):

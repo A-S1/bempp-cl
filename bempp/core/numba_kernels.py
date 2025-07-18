@@ -3016,12 +3016,12 @@ def  thinwire_efield_singular(
                 local_result = 0.0 + 0.0j
                 sign = sign_matrix[ test_fun_index, trial_fun_index]
                 for test_point_index in range(npoints):
-                    S1  = 1 / test_normal * ( _np.sqrt(wire_radius**2 +
-                            (trial_global_points[test_point_index] - test_normal)**2) - 
-                            _np.sqrt(wire_radius**2 + trial_global_points[test_point_index]**2) ) + trial_global_points[test_point_index] / test_normal * _np.log( (trial_global_points[test_point_index] + 
-                            _np.sqrt( wire_radius**2 + trial_global_points[test_point_index] **2 )) / (trial_global_points[test_point_index] - test_normal + _np.sqrt( wire_radius**2 + (trial_global_points[test_point_index] - test_normal)**2 )) ) - 1j * wavenumber * test_normal / 2
-                    S2 = 1 / test_normal**2 * (_np.log((trial_global_points[test_point_index] + _np.sqrt( wire_radius**2 + trial_global_points[test_point_index] **2 )) / (trial_global_points[test_point_index] - test_normal + _np.sqrt( wire_radius**2 + (trial_global_points[test_point_index]- test_normal)**2 ))) - 1j * wavenumber * test_normal) 
-                    local_result += quad_weights[weights_offset + test_point_index]* test_normal * ((test_fun_values[test_fun_index, test_point_index]) * test_edge_lengths[index] * S1 - sign * inv_k2 / test_normal**2 * S2)   
+                    S1  = 1 / 1 * ( _np.sqrt(wire_radius**2 +
+                            (trial_global_points[test_point_index] - 1)**2) - 
+                            _np.sqrt(wire_radius**2 + trial_global_points[test_point_index]**2) ) + trial_global_points[test_point_index] / 1 * _np.log( (trial_global_points[test_point_index] + 
+                            _np.sqrt( wire_radius**2 + trial_global_points[test_point_index] **2 )) / (trial_global_points[test_point_index] - 1 + _np.sqrt( wire_radius**2 + (trial_global_points[test_point_index] -1)**2 )) ) - 1j * wavenumber * test_normal / 2
+                    S2 = 1 / test_normal**2 * (_np.log((trial_global_points[test_point_index] + _np.sqrt( wire_radius**2 + trial_global_points[test_point_index] **2 )) / (trial_global_points[test_point_index] - 1 + _np.sqrt( wire_radius**2 + (trial_global_points[test_point_index]- 1)**2 ))) - 1j * wavenumber * test_normal) 
+                    local_result += quad_weights[weights_offset + test_point_index] * ((test_fun_values[test_fun_index, test_point_index]) * test_edge_lengths[index] * S1 - sign * inv_k2  * S2)   
                 
         
                 result[
