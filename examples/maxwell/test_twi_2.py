@@ -17,7 +17,7 @@ class _DenseAssembly(object):
 
 parameters = SimpleNamespace()
 parameters.quadrature = SimpleNamespace()
-parameters.quadrature.regular = 30
+parameters.quadrature.regular = 15
 parameters.quadrature.singular = 30
 parameters.assembly = SimpleNamespace()
 parameters.assembly.dense = _DenseAssembly()
@@ -49,7 +49,7 @@ grid51 = bempp.api.import_grid("examples/maxwell/line_mesh_long_51.msh")
 grid_list = [grid7, grid11, grid15, grid21, grid31, grid51]
 max_list = []
 
-wavelength_list = [60] # Different wave numbers for each grid
+wavelength_list = [8] # Different wave numbers for each grid
 
 plt.figure(figsize=(10, 6))
 for i, grid in enumerate(grid_list):
@@ -114,7 +114,7 @@ for i, grid in enumerate(grid_list):
         fractional_wavelength = Fraction(4,wvl)
 
         # Plot
-        plt.plot(x_plot, y_mag, label= f"L= {fractional_wavelength} λ", linewidth=2)
+        plt.plot(x_plot, y_mag, label= f"L= {fractional_wavelength} λ, grid {i+1}", linewidth=2)
 
         reactance = 1/np.max(grid.diameters) / np.max(y_imag_abs) 
         resistance = 1/np.max(grid.diameters) / np.max(y_real_abs)
