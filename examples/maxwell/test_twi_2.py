@@ -1,6 +1,7 @@
 import bempp.api
 import numpy as np
 import matplotlib.pyplot as plt
+from fractions import Fraction
 
 wavelength = 50
 k = 2 * np.pi / wavelength
@@ -45,18 +46,19 @@ grid21 = bempp.api.import_grid("examples/maxwell/line_mesh_long_21.msh")
 grid31 = bempp.api.import_grid("examples/maxwell/line_mesh_long_31.msh")
 grid51 = bempp.api.import_grid("examples/maxwell/line_mesh_long_51.msh")
 
-grid_list = [grid15]  #grid7, grid11, grid15, grid21, grid31, grid51]
+grid_list = [grid15] #, grid11, grid15, grid21, grid31, grid51]
 max_list = []
 
-k_list = [k, k/2, k/3, k/4, k/5, k/6]  # Different wave numbers for each grid
+wavelength_list = [8] # Different wave numbers for each grid
 
 plt.figure(figsize=(10, 6))
 for i, grid in enumerate(grid_list):
 #### Define space of Piecewise Linear Functions, with 0 at the boundaries  #### 
-    for j in range(len(k_list)):
+    for j in range(len(wavelength_list)):
 
         
-        k = k_list[j]  # Use the corresponding wave number for the grid
+        wvl = wavelength_list[j]  # Use the corresponding wave number for the grid
+        k = 2 * np.pi / wvl  # Convert wavelength to wave number
         print(f"Processing grid {i+1} with wave number {k:.2f}")
         space = bempp.api.function_space(grid, "PWL", 0, include_boundary_dofs=True)	
 
@@ -108,12 +110,18 @@ for i, grid in enumerate(grid_list):
         y_real_abs =  np.abs(y.real)
         y_imag_abs =  np.abs(y.imag)
 
-        # max_value = np.max(y_real_abs)
-        # y_real_abs /= max_value
+        y_mag = np.abs(y)
+        fractional_wavelength = Fraction(4,wvl)
 
         # Plot
-        plt.plot(x_plot, y_real_abs, label='|Re(I(z))|', linewidth=2)
-        plt.plot(x_plot, y_imag_abs, label='|Im(I(z))|', linestyle='--', linewidth=2)
+        plt.plot(x_plot, y_mag, label= f"L= {fractional_wavelength} λ", linewidth=2)
+
+        reactance = 1/np.max(grid.diameters) / np.max(y_imag_abs) 
+        resistance = 1/np.max(grid.diameters) / np.max(y_real_abs)
+
+        print(f"Reactance for grid {i+1} with {fractional_wavelength}: {reactance:.4f}")
+        print(f"Resistance for grid {i+1} with {fractional_wavelength}: {resistance:.4f}")
+       
 
 plt.xlim(-1, 1)
 plt.ylim(bottom=0)
@@ -125,32 +133,62 @@ plt.grid(True)
 plt.tight_layout()
 
     # Refine the grid for better resolution
+# plt.show()
+
+
+z = np.linspace(-2, 2, 500)
+I =  y
+
+# Sample theta for the cut
+theta = np.linspace(0, np.pi, 500)
+
+# Compute the far-field pattern F(θ) via numerical integration
+F = np.array([np.trapz(I * np.exp(1j * k * z * np.cos(t)), z)*np.sin(t) for t in theta])
+
+F_norm = np.abs(F) / np.max(np.abs(F))
+# F_norm *= F_norm
+
+P_db_down = -20*np.log10(F_norm)        #  dB
+P_db_down = np.minimum(P_db_down, 40)
+
+θ_full = np.concatenate((theta, theta+np.pi))
+P_full = np.concatenate((P_db_down, P_db_down))
+
+# --- 3) plot exactly like Balanis Fig 4.6 λ/2 curve ---
+fig, ax = plt.subplots(subplot_kw={'projection':'polar'})
+ax.plot(θ_full, np.concatenate((F_norm, F_norm)), 'k-', linewidth=2)    # solid black for λ/2
+ax.set_theta_zero_location('N')               # 0° at top
+ax.set_theta_direction(-1)                    # increase clockwise
+ax.set_rmax(0)                                # outer = 0 dB
+ax.set_rmin(40)                               # inner = 40 dB down
+ax.set_rticks([10,20,30])                     # 10,20,30 dB circles
+# ax.set_xticklabels(['10','20','30'])
+ax.set_title('λ/2 Dipole Elevation Plane (power, dB down)', va='bottom')
 plt.show()
+# nx = 300
+# nz = 300
+# extent = 3
+# x, y, z = np.mgrid[-extent : extent : nx * 1j, 0:0:1j, -extent : extent : nz * 1j]
+# points = np.vstack((x.ravel(), y.ravel(), z.ravel()))
+# # -
 
-nx = 300
-nz = 300
-extent = 3
-x, y, z = np.mgrid[-extent : extent : nx * 1j, 0:0:1j, -extent : extent : nz * 1j]
-points = np.vstack((x.ravel(), y.ravel(), z.ravel()))
-# -
-
-# We now initialise the electric field potential operator.
+points = [5, 0, 0]
+# # We now initialise the electric field potential operator.
 current = lu(elec, rhs)
 slp_pot = bempp.api.operators.potential.maxwell.electric_field(space, points, k)
 scattered_field = -slp_pot * current
-print("Scattered field shape:", scattered_field.shape)
+scattered_field_squared = scattered_field**2
+print("Scattered field shape:", scattered_field)
 print("max scattered field value:", np.max(np.abs(scattered_field)))
 # scattered_field = scattered_field.evaluate(points)'
 # Reshape to match the grid dimensions
 #plot the values at each point
 plt.figure(figsize=(10, 6))
-plt.imshow(np.abs(scattered_field.reshape(nx, nz)), extent=(-extent, extent, -extent, extent), origin='lower', cmap='viridis')
-plt.colorbar(label='|Sc attered Field|')
+plt.imshow(scattered_field_squared, origin='lower', cmap='viridis')
+plt.colorbar(label='|Scattered Field|')
 plt.title('Scattered Field Magnitude')
 plt.xlabel('x')
 plt.ylabel('z')
 plt.grid(True)
 plt.tight_layout()
 plt.show()
-
-print("Max values for each grid size:", max_list)

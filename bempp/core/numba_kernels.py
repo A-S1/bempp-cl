@@ -2891,7 +2891,7 @@ def thinwire_efield_regular_assembler(
                     for trial_fun_index in range(nshape_trial):
                         for quad_point_index in range(n_quad_points):
                             integrand = (_np.dot(test_basis_functions[i, test_fun_index, :, test_point_index], trial_basis_functions[trial_element_index, trial_fun_index, :, quad_point_index]) -
-                                        1/ k2 * (test_basis_divergence[i, test_fun_index, test_point_index] * trial_basis_divergence[trial_element_index, trial_fun_index, quad_point_index]) ) * kernel_values[trial_element_index * n_quad_points + quad_point_index]
+                                        1/ (k2*local_test_factor**2) * (test_basis_divergence[i, test_fun_index, test_point_index] * trial_basis_divergence[trial_element_index, trial_fun_index, quad_point_index]) ) * kernel_values[trial_element_index * n_quad_points + quad_point_index]
                             local_result[trial_element_index, test_fun_index, trial_fun_index] += integrand * (quad_weights[test_point_index] * local_test_factor * factors[trial_element_index * n_quad_points + quad_point_index])
 
 
@@ -3439,7 +3439,7 @@ def thinwire_efield_potential(
         global_points[
             :,
             number_of_quad_points
-            * element_index : number_of_quad_points
+            * element_index: number_of_quad_points
             * (1 + element_index),
         ] = grid_data.local2global(element, quad_points)
 
