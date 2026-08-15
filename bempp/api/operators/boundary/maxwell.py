@@ -15,7 +15,7 @@ def electric_field(
     precision=None,
 ):
     """Assemble the electric field boundary operator."""
-    if "triangle" in domain.grid.type.lower():
+    if domain.grid.elements.shape[0] == 3:
         if domain.identifier != "rwg0":
             raise ValueError("Domain space must be an RWG type function space.")
 
@@ -37,9 +37,11 @@ def electric_field(
             True,
         )
 
-    elif "line" in domain.grid.type.lower():
+    elif domain.grid.elements.shape[0] == 2:
         if domain.identifier != "pwl0":
             raise ValueError("Domain space must be a PWL type function space.")
+        if dual_to_range.identifier != "pwl0":
+            raise ValueError("Dual to range space must be a PWL type function space.")
 
         return _common.create_operator(
             "maxwell_electric_field_boundary",
@@ -49,12 +51,14 @@ def electric_field(
             parameters,
             assembler,
             [_np.real(wavenumber), _np.imag(wavenumber)],
-            "helmholtz_single_layer",
+            "thinwire_helmholtz_single_layer",
             "maxwell_electric_field_thinwire",
             device_interface,
             precision,
             True,
         )
+
+    raise ValueError("Maxwell electric field requires triangle or line elements.")
 
 
 

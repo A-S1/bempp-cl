@@ -131,12 +131,12 @@ def dense_assembler(
 
     order = parameters.quadrature.regular
 
-    if "line" in domain.grid.type.lower():
+    if domain.grid.elements.shape[0] == 2:
         # Use line quadrature rule
         # print("Using line quadrature rule")
         quad_points, quad_weights = line_rule(order)
         
-    elif "triangle" in domain.grid.type.lower():
+    elif domain.grid.elements.shape[0] == 3:
         # Use triangle quadrature rule
         # print("Using triangle quadrature rule")
         quad_points, quad_weights = rule(order)
@@ -203,11 +203,11 @@ def potential_assembler(
         operator_descriptor, mode="potential"
     )
 
-    if "line" in space.grid.type.lower():
+    if space.grid.elements.shape[0] == 2:
         # Use line quadrature rule
         quad_points, quad_weights = line_rule(parameters.quadrature.regular)
 
-    elif "triangle" in space.grid.type.lower():
+    elif space.grid.elements.shape[0] == 3:
         # Use triangle quadrature rule
         quad_points, quad_weights = rule(parameters.quadrature.regular)
 

@@ -21,7 +21,7 @@ def electric_field(
     if precision is None:
         precision = bempp.api.DEFAULT_PRECISION
 
-    if "triangle" in space.grid.type.lower():
+    if space.grid.elements.shape[0] == 3:
         if space.identifier != "rwg0":
             raise ValueError("Space must be an RWG type function space for triangular elements.")
 
@@ -42,7 +42,7 @@ def electric_field(
             )
         )
     
-    elif "line" in space.grid.type.lower():
+    elif space.grid.elements.shape[0] == 2:
         if space.identifier != "pwl0":
             raise ValueError("Space must be an PWL type function space for line elements.")
 
@@ -62,6 +62,8 @@ def electric_field(
                 space, points, operator_descriptor, device_interface, assembler, parameters
             )
         )
+
+    raise ValueError("Maxwell electric potential requires triangle or line elements.")
 
 
 def magnetic_field(

@@ -15,6 +15,11 @@ _EDGE_LOCAL = _np.array([[0, 1], [2, 0], [1, 2]])
 class Grid(object):
     """The Grid class."""
 
+    @property
+    def type(self):
+        """Return the element type used by this grid."""
+        return "Triangle Grid"
+
     @_timeit
     def __init__(
         self, vertices, elements, domain_indices=None, grid_id=None, scatter=True
