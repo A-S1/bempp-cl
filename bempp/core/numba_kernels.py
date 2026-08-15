@@ -44,6 +44,7 @@ def select_numba_kernels(operator_descriptor, mode="regular"):
         "laplace_double_layer": laplace_double_layer_regular,
         "laplace_adjoint_double_layer": laplace_adjoint_double_layer_regular,
         "helmholtz_single_layer": helmholtz_single_layer_regular,
+        "thinwire_helmholtz_single_layer": thinwire_helmholtz_single_layer_regular,
         "helmholtz_double_layer": helmholtz_double_layer_regular,
         "thinwire_helmholtz_potential": thinwire_helmholtz_potential,
         "helmholtz_far_field_single_layer": helmholtz_far_field_single_layer,
@@ -59,6 +60,7 @@ def select_numba_kernels(operator_descriptor, mode="regular"):
         "laplace_double_layer": laplace_double_layer_singular,
         "laplace_adjoint_double_layer": laplace_adjoint_double_layer_singular,
         "helmholtz_single_layer": helmholtz_single_layer_singular,
+        "thinwire_helmholtz_single_layer": thinwire_helmholtz_single_layer_regular,
         "helmholtz_double_layer": helmholtz_double_layer_singular,
         "helmholtz_adjoint_double_layer": helmholtz_adjoint_double_layer_singular,
         "modified_helmholtz_single_layer": modified_helmholtz_single_layer_singular,
@@ -173,31 +175,20 @@ def get_line_transform(grid_data, elements, local_points, local_multipliers):
     nopython=True, parallel=False, error_model="numpy", fastmath=True, boundscheck=False
 )
 def get_divergence_line(grid_data, elements, local_points, local_multipliers):
-    """Compute the divergence of the line elements."""
+    """Compute arclength derivatives of the two line hat functions."""
     npoints = local_points.shape[-1]
     nelements = len(elements)
     result = _np.zeros((nelements, 2, npoints), dtype=local_points.dtype)
 
     for element_index in _numba.prange(nelements):
         element = elements[element_index]
-        # end‐points
         v0 = grid_data.vertices[:, grid_data.elements[0, element]]
         v1 = grid_data.vertices[:, grid_data.elements[1, element]]
-        seg = v1 - v0
-        length = _np.linalg.norm(seg)
-        if length > 0.0:
-            tangent = seg / length
-        else:
-            tangent = _np.zeros(3, dtype=_np.float64)
-
-        m0 = 1 #/ local_multipliers[element_index, 0]
-        m1 = 1 #/ local_multipliers[element_index, 1]
+        length = _np.linalg.norm(v1 - v0)
 
         for qp in range(npoints):
-        
-            # fill the vector basis functions
-            result[element_index, 0, qp]  = -1*_np.sum(tangent * m0)
-            result[element_index, 1, qp] = _np.sum(tangent * m1)
+            result[element_index, 0, qp] = -1.0 / length
+            result[element_index, 1, qp] = 1.0 / length
      
     return result
 
@@ -481,7 +472,7 @@ def laplace_adjoint_double_layer_singular(
     nopython=True, parallel=False, error_model="numpy", fastmath=True, boundscheck=False
 )
 def helmholtz_single_layer_regular(
-    test_point, trial_points, test_normal, trial_normals, kernel_parameters, wire_radius = None
+    test_point, trial_points, test_normal, trial_normals, kernel_parameters
 ):
     """Evaluate Helmholtz single layer for regular kernels."""
     wavenumber_real = kernel_parameters[0]
@@ -492,35 +483,45 @@ def helmholtz_single_layer_regular(
     output_real = _np.zeros(npoints, dtype=dtype)
     output_imag = _np.zeros(npoints, dtype=dtype)
 
-    output_wire = _np.zeros(npoints, dtype=_np.complex128)
-
     m_inv_4pi = dtype.type(M_INV_4PI)
-    if wire_radius is None:
-        for i in range(3):
-            for j in range(npoints):
-                dist[j] += (trial_points[i, j] - test_point[i]) ** 2  
-            for j in range(npoints):
-                dist[j] = _np.sqrt(dist[j])
-            for j in range(npoints):
-                output_real[j] = _np.cos(wavenumber_real * dist[j]) * m_inv_4pi / dist[j]
-                output_imag[j] = _np.sin(wavenumber_real * dist[j]) * m_inv_4pi / dist[j]
-            if wavenumber_imag != 0:
-                for j in range(npoints):
-                    output_real[j] *= _np.exp(-wavenumber_imag * dist[j])
-                    output_imag[j] *= _np.exp(-wavenumber_imag * dist[j])
-            return output_real + 1j * output_imag         
-    else:  
+    for i in range(3):
         for j in range(npoints):
-            for i in range(3):
-                dist[j] += (trial_points[i, j] - test_point[i]) ** 2
-                
-            dist[j] = _np.sqrt(dist[j])
-            dist[j] += wire_radius ** 2
-            dist[j] = _np.sqrt(dist[j])
-        
+            dist[j] += (trial_points[i, j] - test_point[i]) ** 2
+    for j in range(npoints):
+        dist[j] = _np.sqrt(dist[j])
+        output_real[j] = _np.cos(wavenumber_real * dist[j]) * m_inv_4pi / dist[j]
+        output_imag[j] = _np.sin(wavenumber_real * dist[j]) * m_inv_4pi / dist[j]
+    if wavenumber_imag != 0:
+        for j in range(npoints):
+            output_real[j] *= _np.exp(-wavenumber_imag * dist[j])
+            output_imag[j] *= _np.exp(-wavenumber_imag * dist[j])
+    return output_real + 1j * output_imag
 
-            output_wire[j] = _np.exp(-1j * wavenumber_real * dist[j]) * m_inv_4pi / dist[j]
-        return output_wire
+
+@_numba.jit(
+    nopython=True, parallel=False, error_model="numpy", fastmath=True, boundscheck=False
+)
+def thinwire_helmholtz_single_layer_regular(
+    test_point, trial_points, test_normal, trial_normals, kernel_parameters, wire_radius
+):
+    """Evaluate the radius-regularized Helmholtz kernel for a thin wire."""
+    wavenumber = kernel_parameters[0] + 1j * kernel_parameters[1]
+    npoints = trial_points.shape[1]
+    dtype = trial_points.dtype
+    dist = _np.zeros(npoints, dtype=dtype)
+    output = _np.zeros(npoints, dtype=_np.complex128)
+    m_inv_4pi = dtype.type(M_INV_4PI)
+
+    for dim in range(3):
+        for index in range(npoints):
+            difference = trial_points[dim, index] - test_point[dim]
+            dist[index] += difference * difference
+
+    for index in range(npoints):
+        dist[index] = _np.sqrt(dist[index] + wire_radius * wire_radius)
+        output[index] = _np.exp(1j * wavenumber * dist[index]) * m_inv_4pi / dist[index]
+
+    return output
     
 
 @_numba.jit(
@@ -553,7 +554,7 @@ def thinwire_analytical_singular(
 def thinwire_helmholtz_potential(
     test_point, trial_points, test_normal, trial_normals, kernel_parameters, wire_radius = None
 ):
-    """pocklington kernel fot thin wire potentials."""
+    """Evaluate the axial Pocklington field kernel at observation points."""
     wavenumber_real = kernel_parameters[0]
     wavenumber_imag = kernel_parameters[1]
 
@@ -561,22 +562,44 @@ def thinwire_helmholtz_potential(
     npoints = trial_points.shape[1]
     dtype = trial_points.dtype
     dist = _np.zeros(npoints, dtype=dtype)
+    rho_squared = _np.zeros(npoints, dtype=dtype)
     output = _np.zeros(npoints, dtype=_np.complex128)
     m_inv_4pi = dtype.type(M_INV_4PI)
     
-    if wire_radius is None:
-        print("Warning: No wire radius provided, using 0.0")
-        pass 
     for i in range(3):
         for j in range(npoints):
             dist[j] += (trial_points[i, j] - test_point[i]) ** 2
-            dist[j] += wire_radius[j] ** 2
+
+    if trial_normals is not None:
+        for j in range(npoints):
+            axial_distance = 0.0
+            for i in range(3):
+                axial_distance += (
+                    test_point[i] - trial_points[i, j]
+                ) * trial_normals[i, j]
+            rho_squared[j] = dist[j] - axial_distance * axial_distance
+            if rho_squared[j] < wire_radius[j] ** 2:
+                rho_squared[j] = wire_radius[j] ** 2
+            dist[j] = axial_distance * axial_distance + rho_squared[j]
+    else:
+        for j in range(npoints):
+            rho_squared[j] = wire_radius[j] ** 2
+            dist[j] += rho_squared[j]
 
     for j in range(npoints):
         dist[j] = _np.sqrt(dist[j])
 
     for j in range(npoints):
-        output[j] = _np.exp(-1j * wavenumber * dist[j]) * m_inv_4pi / dist[j]**5 * ((1 + 1j * dist[j]) * (2 * dist[j] ** 2 - 3 * wire_radius[j]**2) + (wavenumber * wire_radius[j] * dist[j])**2 ) 
+        output[j] = (
+            _np.exp(1j * wavenumber * dist[j])
+            * m_inv_4pi
+            / dist[j] ** 5
+            * (
+                (1 - 1j * wavenumber * dist[j])
+                * (2 * dist[j] ** 2 - 3 * rho_squared[j])
+                + wavenumber * wavenumber * rho_squared[j] * dist[j] ** 2
+            )
+        )
 
     return output  
 
@@ -2795,7 +2818,7 @@ def thinwire_efield_regular_assembler(
     # --- Setup ---
 
     wavenumber = kernel_parameters[0] + 1j * kernel_parameters[1]
-    k2 = wavenumber * wavenumber	
+    inv_k2 = 1.0 / (wavenumber * wavenumber)
 
 
     result_type = result.dtype
@@ -2818,7 +2841,6 @@ def thinwire_efield_regular_assembler(
     test_basis_divergence = get_divergence_line(test_grid_data, test_elements, quad_points, test_multipliers)
     trial_basis_divergence = get_divergence_line(trial_grid_data, trial_elements, quad_points, trial_multipliers)
 
-    # --- Compute Edge Lengths for Each Segment ---
     test_edge_lengths = get_edge_lengths_line(test_grid_data, test_elements)
     trial_edge_lengths = get_edge_lengths_line(trial_grid_data, trial_elements)
 
@@ -2829,8 +2851,9 @@ def thinwire_efield_regular_assembler(
         trial_element = trial_elements[trial_element_index]
         for trial_point_index in range(n_quad_points):
             factors[trial_element_index * n_quad_points + trial_point_index] = (
-                quad_weights[trial_point_index] )* trial_edge_lengths[trial_element]
-            #)
+                quad_weights[trial_point_index]
+                * trial_edge_lengths[trial_element_index]
+            )
 
     # --- Main Assembly Loop over Test Elements (Parallelized) ---
    
@@ -2843,22 +2866,11 @@ def thinwire_efield_regular_assembler(
         # shape is (1, n_quad_points) for 1D (wire axis) data.
         test_global_points = test_grid_data.local2global(test_element, quad_points)
         
-        # The integration factor for the test element (its segment length)
-        local_test_factor =  1  * test_edge_lengths[i]
+        local_test_factor = test_edge_lengths[i]
 
         # --- Compute the Inner Integral: G(z) = int_L g(z,z') phi(z') dz' for each test quadrature point ---
         
-        test_radius = wire_radius[i]
-
-        is_adjacent = _np.zeros(n_trial_elements, dtype=_np.bool_)
-
-        #sets adjacency flag
-        for trial_element_index in range(n_trial_elements):
-            trial_element = trial_elements[trial_element_index]
-            if grids_identical and elements_adjacent_line(
-                test_grid_data.elements, test_element, trial_element
-            ):
-                is_adjacent[trial_element_index] = True
+        test_radius = wire_radius[test_element]
 
         for test_point_index in range(n_quad_points):
             # Get the current test global coordinate (as a 1D array of length 1)
@@ -2877,22 +2889,53 @@ def thinwire_efield_regular_assembler(
 
        
 
-        # --- Assemble the Local Matrix Contribution ---
-        # The weak form for each test basis function (with derivative) is:
-        #   Z_mn = int [ (dphi_m/dz)* (d/dz G_n(z)) + k2 phi_m G_n(z) ] dV
-        # where the integration dV becomes (quad_weight * local_test_factor) for a line element.
-        
             for test_fun_index in range(nshape_test):
                 for trial_element_index in range(n_trial_elements):
-                    if trial_elements[trial_element_index] == test_elements[i]:
+                    trial_element = trial_elements[trial_element_index]
+                    if grids_identical and trial_element == test_element:
                         continue
-                    # if is_adjacent[trial_element_index]:
-                    #     continue
                     for trial_fun_index in range(nshape_trial):
                         for quad_point_index in range(n_quad_points):
-                            integrand = (_np.dot(test_basis_functions[i, test_fun_index, :, test_point_index], trial_basis_functions[trial_element_index, trial_fun_index, :, quad_point_index]) -
-                                        1/ (k2*local_test_factor**2) * (test_basis_divergence[i, test_fun_index, test_point_index] * trial_basis_divergence[trial_element_index, trial_fun_index, quad_point_index]) ) * kernel_values[trial_element_index * n_quad_points + quad_point_index]
-                            local_result[trial_element_index, test_fun_index, trial_fun_index] += integrand * (quad_weights[test_point_index] * local_test_factor * factors[trial_element_index * n_quad_points + quad_point_index])
+                            basis_product = _np.dot(
+                                test_basis_functions[
+                                    i, test_fun_index, :, test_point_index
+                                ],
+                                trial_basis_functions[
+                                    trial_element_index,
+                                    trial_fun_index,
+                                    :,
+                                    quad_point_index,
+                                ],
+                            )
+                            divergence_product = (
+                                test_basis_divergence[
+                                    i, test_fun_index, test_point_index
+                                ]
+                                * trial_basis_divergence[
+                                    trial_element_index,
+                                    trial_fun_index,
+                                    quad_point_index,
+                                ]
+                            )
+                            integrand = (
+                                basis_product - inv_k2 * divergence_product
+                            ) * kernel_values[
+                                trial_element_index * n_quad_points
+                                + quad_point_index
+                            ]
+                            local_result[
+                                trial_element_index,
+                                test_fun_index,
+                                trial_fun_index,
+                            ] += (
+                                integrand
+                                * quad_weights[test_point_index]
+                                * local_test_factor
+                                * factors[
+                                    trial_element_index * n_quad_points
+                                    + quad_point_index
+                                ]
+                            )
 
 
                        
@@ -2914,6 +2957,12 @@ def thinwire_efield_regular_assembler(
                                     local_result[
                                         trial_element_index, test_fun_index, trial_fun_index
                                     ]
+                                    * test_multipliers[
+                                        test_element, test_fun_index
+                                    ]
+                                    * trial_multipliers[
+                                        trial_element, trial_fun_index
+                                    ]
                     )
 
 
@@ -2921,7 +2970,7 @@ def thinwire_efield_regular_assembler(
 @_numba.jit(
     nopython=True, parallel=True, error_model="numpy", fastmath=True, boundscheck=False
 )
-def  thinwire_efield_singular(
+def _legacy_thinwire_efield_singular(
     grid_data,
     test_points,
     trial_points,
@@ -3031,9 +3080,106 @@ def  thinwire_efield_singular(
                         + test_fun_index * nshape_trial
                         + trial_fun_index
                     ] +=  inv4pi * local_result 
-        
 
-                
+
+@_numba.jit(
+    nopython=True, parallel=True, error_model="numpy", fastmath=True, boundscheck=False
+)
+def thinwire_efield_singular(
+    grid_data,
+    test_points,
+    trial_points,
+    quad_weights,
+    test_elements,
+    trial_elements,
+    test_offsets,
+    trial_offsets,
+    weights_offsets,
+    number_of_quad_points,
+    test_normal_multipliers,
+    trial_normal_multipliers,
+    nshape_test,
+    nshape_trial,
+    test_shapeset,
+    trial_shapeset,
+    kernel_evaluator,
+    kernel_parameters,
+    result,
+):
+    """Assemble coincident thin-wire pairs with tensor Gauss quadrature."""
+    nelements = len(test_elements)
+    wavenumber = kernel_parameters[0] + 1j * kernel_parameters[1]
+    inv_k2 = 1.0 / (wavenumber * wavenumber)
+
+    for index in _numba.prange(nelements):
+        test_element = test_elements[index]
+        trial_element = trial_elements[index]
+        test_offset = test_offsets[index]
+        trial_offset = trial_offsets[index]
+        weights_offset = weights_offsets[index]
+        npoints = number_of_quad_points[index]
+
+        test_local_points = test_points[test_offset : test_offset + npoints]
+        trial_local_points = trial_points[trial_offset : trial_offset + npoints]
+        test_global_points = grid_data.local2global(
+            test_element, test_local_points
+        )
+        trial_global_points = grid_data.local2global(
+            trial_element, trial_local_points
+        )
+
+        test_basis = get_line_transform(
+            grid_data, [test_element], test_local_points, None
+        )[0]
+        trial_basis = get_line_transform(
+            grid_data, [trial_element], trial_local_points, None
+        )[0]
+        test_divergence = get_divergence_line(
+            grid_data, [test_element], test_local_points, None
+        )[0]
+        trial_divergence = get_divergence_line(
+            grid_data, [trial_element], trial_local_points, None
+        )[0]
+
+        wire_radius = grid_data.wire_radius[test_element]
+        test_length = grid_data.integration_elements[test_element]
+        trial_length = grid_data.integration_elements[trial_element]
+
+        for point_index in range(npoints):
+            # Tensor rules contain a different test point in each pair, so
+            # update the kernel whenever the test coordinate changes.
+            kernel_value = kernel_evaluator(
+                test_global_points[:, point_index],
+                trial_global_points[:, point_index : point_index + 1],
+                None,
+                None,
+                kernel_parameters,
+                wire_radius,
+            )[0]
+            weighted_kernel = (
+                kernel_value
+                * quad_weights[weights_offset + point_index]
+                * test_length
+                * trial_length
+            )
+
+            for test_fun_index in range(nshape_test):
+                for trial_fun_index in range(nshape_trial):
+                    basis_product = _np.dot(
+                        test_basis[test_fun_index, :, point_index],
+                        trial_basis[trial_fun_index, :, point_index],
+                    )
+                    divergence_product = (
+                        test_divergence[test_fun_index, point_index]
+                        * trial_divergence[trial_fun_index, point_index]
+                    )
+                    result[
+                        nshape_trial * nshape_test * index
+                        + test_fun_index * nshape_trial
+                        + trial_fun_index
+                    ] += weighted_kernel * (
+                        basis_product - inv_k2 * divergence_product
+                    )
 
 @_numba.jit(
     nopython=True, parallel=True, error_model="numpy", fastmath=True, boundscheck=False
@@ -3423,9 +3569,18 @@ def thinwire_efield_potential(
     wire_radius = grid_data.wire_radius 
 
     wire_radius_point = _np.zeros((n_support_elements * number_of_quad_points), dtype=dtype)
+    trial_tangents = _np.zeros(
+        (3, n_support_elements * number_of_quad_points), dtype=dtype
+    )
     for i in range(n_support_elements):
+        element = support_elements[i]
+        v0 = grid_data.vertices[:, grid_data.elements[0, element]]
+        v1 = grid_data.vertices[:, grid_data.elements[1, element]]
+        tangent = (v1 - v0) / _np.linalg.norm(v1 - v0)
         for j in range(number_of_quad_points):
-            wire_radius_point[i * number_of_quad_points + j] = wire_radius[i]
+            point_index = i * number_of_quad_points + j
+            wire_radius_point[point_index] = wire_radius[element]
+            trial_tangents[:, point_index] = tangent
 
     global_points = _np.zeros(
         (3, number_of_quad_points * n_support_elements), dtype=dtype
@@ -3456,7 +3611,6 @@ def thinwire_efield_potential(
                 tmp1[:, number_of_quad_points * element_index + quad_point_index] += (
                     factor
                     * basis_functions[element_index, fun_index, :, quad_point_index]
-                    * grid_data.integration_elements[element]
                 )
 
 
@@ -3464,7 +3618,12 @@ def thinwire_efield_potential(
         test_point = points[:, point_index].copy()
 
         kernel_values = kernel_function(
-            test_point, global_points, None, None, kernel_parameters, wire_radius_point
+            test_point,
+            global_points,
+            None,
+            trial_tangents,
+            kernel_parameters,
+            wire_radius_point,
         )
         diff = test_point.reshape(3, 1) - global_points
         dist = _np.zeros(number_of_quad_points * n_support_elements, dtype=dtype)

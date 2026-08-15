@@ -433,7 +433,12 @@ def pwl0_function_space(
     support, normal_multipliers = _process_segments(grid, support_elements, segments, swapped_normals)
   
     # Compute the mapping and multipliers specific for line grids.
-    global_dof_count, support, local2global, local_multipliers = _compute_pwl0_space_data(grid)
+    _, support, local2global, local_multipliers = _compute_pwl0_space_data(
+        grid,
+        support,
+        include_boundary_dofs,
+        truncate_at_segment_edge,
+    )
 
     
     return (
@@ -453,8 +458,10 @@ def pwl0_function_space(
     )
 
 def _compute_pwl0_space_data(
-        grid, 
-        include_boundary_dofs: bool = False
+    grid,
+    support,
+    include_boundary_dofs=False,
+    truncate_at_segment_edge=True,
 ):
     """
     Compute the local-to-global mapping for piecewise linear functions on a line grid.
@@ -462,54 +469,53 @@ def _compute_pwl0_space_data(
     In a line grid, the degrees of freedom are associated with the vertices (global_dof_count),
     but the local mapping (local2global and local multipliers) is defined per element (segment).
     """
-    include_boundary_dofs = True
-    #return global_dof_count, support, local2global, local_multipliers
     number_of_vertices = grid.number_of_vertices
     number_of_elements = grid.number_of_elements
+    support = _np.asarray(support, dtype=_np.bool_)
 
-    # 1) Count how many segments meet at each vertex
-    valence = _np.zeros(number_of_vertices, dtype=int)
-    # grid.elements.shape == (2, nE)
-    for v in grid.elements[0]:
-        valence[v] += 1
-    for v in grid.elements[1]:
-        valence[v] += 1
+    total_valence = _np.zeros(number_of_vertices, dtype=_np.int32)
+    support_valence = _np.zeros(number_of_vertices, dtype=_np.int32)
+    for element in range(number_of_elements):
+        for local_index in range(2):
+            vertex = grid.elements[local_index, element]
+            total_valence[vertex] += 1
+            if support[element]:
+                support_valence[vertex] += 1
 
-    # 2) Which vertices will carry DOFs?
-    has_dof = valence > 1    # only interiors
     if include_boundary_dofs:
-        has_dof = valence > 0  # all vertices
+        vertex_has_dof = support_valence > 0
+    else:
+        # Open-wire endpoints carry no current. At a segment boundary, only
+        # keep a continuous hat when the complete vertex star is supported.
+        vertex_has_dof = (support_valence > 0) & (total_valence > 1)
+        if truncate_at_segment_edge:
+            vertex_has_dof &= support_valence == total_valence
 
-    # 3) Give each such vertex a global DOF index
-    vertex2dof = -_np.ones(number_of_vertices, dtype=int)
-    dof_count = 0
-    for v in range(number_of_vertices):
-        if has_dof[v]:
-            vertex2dof[v] = dof_count
-            dof_count += 1
+    vertex2dof = -_np.ones(number_of_vertices, dtype=_np.int32)
+    used_vertices = _np.flatnonzero(vertex_has_dof)
+    vertex2dof[used_vertices] = _np.arange(len(used_vertices), dtype=_np.int32)
 
-    # 4) Build local2global: for each segment, look up its two endpoint DOFs
-    local2global = _np.empty((number_of_elements, 2), dtype=int)
-    for e in range(number_of_elements):
-        v0, v1 = grid.elements[:, e]
-        local2global[e, 0] = vertex2dof[v0]
-        local2global[e, 1] = vertex2dof[v1]
+    local2global = _np.zeros((number_of_elements, 2), dtype=_np.uint32)
+    local_multipliers = _np.zeros((number_of_elements, 2), dtype=_np.float64)
+    final_support = _np.zeros(number_of_elements, dtype=_np.bool_)
 
-    for e in range(number_of_elements):
-        a, b = local2global[e]
-        if a < 0 and b >= 0:
-            local2global[e, 0] = b
-        elif b < 0 and a >= 0:
-            local2global[e, 1] = a
+    for element in _np.flatnonzero(support):
+        for local_index in range(2):
+            dof = vertex2dof[grid.elements[local_index, element]]
+            if dof >= 0:
+                local2global[element, local_index] = dof
+                local_multipliers[element, local_index] = 1.0
+                final_support[element] = True
 
-    # 5) A segment is “supported” if it has at least one valid local DOF
-    support = _np.any(local2global >= 0, axis=1)
+        # Bempp requires every local index to map to a valid global index.
+        # A zero multiplier removes endpoint basis functions from assembly.
+        if final_support[element]:
+            fallback = _np.max(local2global[element])
+            for local_index in range(2):
+                if local_multipliers[element, local_index] == 0.0:
+                    local2global[element, local_index] = fallback
 
-    # 6) Local multipliers = edge lengths (you could also normalize if desired)
-    edge_lengths = grid.diameters  # shape (nE,)
-    local_multipliers = _np.vstack([edge_lengths, edge_lengths]).T
-
-    return dof_count, support, local2global, local_multipliers
+    return len(used_vertices), final_support, local2global, local_multipliers
 
 def pwl0_barycentric_function_space(coarse_space):
     """
@@ -981,7 +987,7 @@ def _numba_pwl0_evaluate(
         The evaluated basis functions for the two local dofs (each a 3D vector) at
         the given local coordinates.
     """
-    npoints = local_coordinates.shape[1]
+    npoints = local_coordinates.shape[-1]
     result = _np.empty((3, 2, npoints), dtype=_np.float64)
     
     v0 = grid_data.vertices[:, grid_data.elements[0, element_index]]
@@ -993,19 +999,22 @@ def _numba_pwl0_evaluate(
     else:
         tangent = _np.zeros(3)
     
-    s = local_coordinates[0, :]
-    
-    phi0 = local_multipliers[element_index, 0] - s
+    if local_coordinates.ndim == 2:
+        s = local_coordinates[0]
+    else:
+        s = local_coordinates
+
+    phi0 = 1.0 - s
     phi1 = s
     
     for i in range(npoints):
-        result[0, 0, i] = tangent[0] * phi0[i] / local_multipliers[element_index, 0]
-        result[1, 0, i] = tangent[1] * phi0[i] / local_multipliers[element_index, 0]
-        result[2, 0, i] = tangent[2] * phi0[i] / local_multipliers[element_index, 0]
+        result[0, 0, i] = tangent[0] * phi0[i]
+        result[1, 0, i] = tangent[1] * phi0[i]
+        result[2, 0, i] = tangent[2] * phi0[i]
         
-        result[0, 1, i] = tangent[0] * phi1[i] / local_multipliers[element_index, 1]
-        result[1, 1, i] = tangent[1] * phi1[i] / local_multipliers[element_index, 1]
-        result[2, 1, i] = tangent[2] * phi1[i] / local_multipliers[element_index, 1]
+        result[0, 1, i] = tangent[0] * phi1[i]
+        result[1, 1, i] = tangent[1] * phi1[i]
+        result[2, 1, i] = tangent[2] * phi1[i]
     
     return result
 
@@ -1042,31 +1051,12 @@ def _numba_pwl0_divergence(
     npoints = local_coordinates.shape[1]
     result = _np.empty((2, npoints), dtype=_np.float64)
 
-    result_x = _np.empty((2, npoints), dtype=_np.float64)
-    result_y = _np.empty((2, npoints), dtype=_np.float64)
-    result_z = _np.empty((2, npoints), dtype=_np.float64)
-    
     v0 = grid_data.vertices[:, grid_data.elements[0, element_index]]
     v1 = grid_data.vertices[:, grid_data.elements[1, element_index]]
-    seg_vec = v1 - v0
-    seg_len = _np.linalg.norm(seg_vec)
-    if seg_len > 0:
-        tangent = seg_vec / seg_len
-    else:
-        tangent = _np.zeros(3)
+    seg_len = _np.linalg.norm(v1 - v0)
 
-    
     for i in range(npoints):
-        result_x[0, i] = tangent[0] * local_multipliers[element_index, 0]
-        result_y[0, i] = tangent[1] * local_multipliers[element_index, 0]
-        result_z[0, i] = tangent[2] * local_multipliers[element_index, 0]
+        result[0, i] = -1.0 / seg_len
+        result[1, i] = 1.0 / seg_len
 
-        result_x[1, i] = tangent[0] * local_multipliers[element_index, 1]
-        result_y[1, i] = tangent[1] * local_multipliers[element_index, 1]
-        result_z[1, i] = tangent[2] * local_multipliers[element_index, 1]
-        
-    result[0, :] = result_x[0, :] + result_y[0, :] + result_z[0, :]
-    result[1, :] = result_x[1, :] + result_y[1, :] + result_z[1, :]
-    
-    
     return result
