@@ -90,6 +90,15 @@ def solve_dipole(
 
     # Endpoint degrees of freedom are excluded, enforcing I=0 at both ends.
     space = bempp.api.function_space(grid, "PWL", 0)
+    expected_dof_count = number_of_elements - 1
+    if space.global_dof_count != expected_dof_count:
+        raise RuntimeError(
+            "The imported Bempp package does not contain the thin-wire "
+            "endpoint fix. Expected "
+            f"{expected_dof_count} PWL dofs, found {space.global_dof_count}. "
+            f"Bempp was imported from {bempp.__file__!r}. Install this "
+            "checkout with `python -m pip install -e .` and rerun."
+        )
     parameters = bempp.api.DefaultParameters()
     parameters.quadrature.regular = regular_order
     parameters.quadrature.singular = singular_order
@@ -118,7 +127,7 @@ def main():
     order = np.argsort(coordinate)
     plt.plot(coordinate[order], np.abs(current[order]))
     plt.xlabel("Wire coordinate")
-    plt.ylabel("Normalized current magnitude")
+    plt.ylabel("Current magnitude (arbitrary units)")
     plt.title("Thin-wire dipole current")
     plt.grid(True)
     plt.tight_layout()

@@ -85,7 +85,11 @@ def test_thinwire_current_converges_under_uniform_refinement():
             regular_order=8,
             singular_order=16,
         )
+        np.testing.assert_allclose(current[[0, -1]], 0.0, atol=1e-14)
         np.testing.assert_allclose(current, current[::-1], rtol=2e-11, atol=2e-11)
+        feed_index = np.argmin(np.abs(coordinate))
+        assert np.abs(current[feed_index]) > np.abs(current[1])
+        assert np.abs(current[feed_index]) > np.abs(current[-2])
         interpolated_currents.append(
             np.interp(comparison_points, coordinate, current.real)
             + 1j * np.interp(comparison_points, coordinate, current.imag)

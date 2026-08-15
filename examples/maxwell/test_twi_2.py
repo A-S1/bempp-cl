@@ -39,7 +39,7 @@ def main():
         previous_current = interpolated_current
 
     plt.xlabel("Wire coordinate")
-    plt.ylabel("Normalized current magnitude")
+    plt.ylabel("Current magnitude (arbitrary units)")
     plt.title("Thin-wire dipole mesh convergence")
     plt.legend()
     plt.grid(True)
