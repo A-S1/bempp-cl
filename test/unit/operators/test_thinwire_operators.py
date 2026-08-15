@@ -5,6 +5,11 @@ import numpy as np
 import bempp.api
 from bempp.api.grid import LineGrid
 from bempp.core.numba_kernels import thinwire_helmholtz_potential
+from examples.maxwell.thin_wire_dipole import (
+    delta_gap_load,
+    solve_dipole,
+    straight_wire_grid,
+)
 
 
 def _line_grid(direction, number_of_vertices=7, length=2.0, radius=0.01):
@@ -50,6 +55,51 @@ def test_wire_radius_update_reaches_numba_grid_data():
     np.testing.assert_allclose(grid.wire_radius, 0.025)
     np.testing.assert_allclose(grid.data("double").wire_radius, 0.025)
     np.testing.assert_allclose(grid.data("single").wire_radius, 0.025)
+
+
+def test_delta_gap_load_is_independent_of_mesh_parity():
+    """The feed must stay centred for meshes with even or odd element counts."""
+    expected_values = {
+        20: np.array([1.0]),
+        21: np.array([0.5, 0.5]),
+    }
+
+    for number_of_elements, expected in expected_values.items():
+        grid = straight_wire_grid(number_of_elements)
+        space = bempp.api.function_space(grid, "PWL", 0)
+        loading = delta_gap_load(grid, space)
+        nonzero_values = np.sort(loading[loading != 0.0].real)
+
+        np.testing.assert_allclose(nonzero_values, expected)
+        np.testing.assert_allclose(np.sum(loading), 1.0)
+
+
+def test_thinwire_current_converges_under_uniform_refinement():
+    """Successive PWL solutions must approach one mesh-independent curve."""
+    comparison_points = np.linspace(-1.75, 1.75, 141)
+    interpolated_currents = []
+
+    for number_of_elements in (8, 16, 32):
+        coordinate, current = solve_dipole(
+            number_of_elements,
+            regular_order=8,
+            singular_order=16,
+        )
+        np.testing.assert_allclose(current, current[::-1], rtol=2e-11, atol=2e-11)
+        interpolated_currents.append(
+            np.interp(comparison_points, coordinate, current.real)
+            + 1j * np.interp(comparison_points, coordinate, current.imag)
+        )
+
+    coarse_change = np.linalg.norm(
+        interpolated_currents[0] - interpolated_currents[1]
+    ) / np.linalg.norm(interpolated_currents[1])
+    fine_change = np.linalg.norm(
+        interpolated_currents[1] - interpolated_currents[2]
+    ) / np.linalg.norm(interpolated_currents[2])
+
+    assert fine_change < 0.5 * coarse_change
+    assert fine_change < 0.04
 
 
 def test_thinwire_boundary_operator_is_symmetric_and_rotation_invariant():
