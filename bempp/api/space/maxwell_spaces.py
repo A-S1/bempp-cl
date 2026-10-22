@@ -1,5 +1,7 @@
 """Definition of Maxwell spaces."""
 
+from dataclasses import dataclass as _dataclass
+
 import numpy as _np
 import numba as _numba
 
@@ -1060,3 +1062,226 @@ def _numba_pwl0_divergence(
         result[1, i] = 1.0 / seg_len
 
     return result
+
+
+@_dataclass(frozen=True)
+class ChampagneTriangleData:
+    """Geometric coefficients for one triangle in a junction fan."""
+
+    element: int
+    junction_local_index: int
+    opposite_edge_length: float
+    height: float
+    height_direction: _np.ndarray
+    angle: float
+    coefficient: float
+
+    @property
+    def flux_weight(self):
+        """Return this triangle's fraction of the unit junction flux."""
+        return self.coefficient * self.opposite_edge_length
+
+
+class ChampagneJunction:
+    """Composite surface-wire basis associated with one attachment point.
+
+    This implements the geometric part of equations (1)--(3) in Champagne,
+    Johnson, and Wilton, *On Attaching a Wire to a Triangulated Surface*
+    (IEEE AP-S, 2002). The composite basis has a singular surface part and a
+    rooftop on the first wire segment.
+    """
+
+    def __init__(
+        self,
+        surface_grid,
+        wire_grid,
+        surface_vertex,
+        wire_vertex,
+        wire_element,
+    ):
+        self.surface_grid = surface_grid
+        self.wire_grid = wire_grid
+        self.surface_vertex = int(surface_vertex)
+        self.wire_vertex = int(wire_vertex)
+        self.wire_element = int(wire_element)
+        self.point = surface_grid.vertices[:, self.surface_vertex].copy()
+
+        if not _np.allclose(
+            self.point,
+            wire_grid.vertices[:, self.wire_vertex],
+            rtol=0.0,
+            atol=1.0e-12,
+        ):
+            raise ValueError("surface and wire junction vertices do not coincide")
+
+        wire_vertices = wire_grid.elements[:, self.wire_element]
+        locations = _np.flatnonzero(wire_vertices == self.wire_vertex)
+        if len(locations) != 1:
+            raise ValueError("wire element must contain the junction vertex once")
+        other_local_index = 1 - int(locations[0])
+        other_vertex = wire_vertices[other_local_index]
+        wire_vector = wire_grid.vertices[:, other_vertex] - self.point
+        self.wire_length = float(_np.linalg.norm(wire_vector))
+        if self.wire_length == 0.0:
+            raise ValueError("junction wire element has zero length")
+        self.wire_direction = wire_vector / self.wire_length
+
+        incident = _np.flatnonzero(
+            _np.any(surface_grid.elements == self.surface_vertex, axis=0)
+        )
+        if len(incident) == 0:
+            raise ValueError("junction vertex has no incident surface triangles")
+
+        raw_data = []
+        total_angle = 0.0
+        for element in incident:
+            connectivity = surface_grid.elements[:, element]
+            junction_local_index = int(
+                _np.flatnonzero(connectivity == self.surface_vertex)[0]
+            )
+            opposite_vertices = _np.delete(connectivity, junction_local_index)
+            first = surface_grid.vertices[:, opposite_vertices[0]]
+            second = surface_grid.vertices[:, opposite_vertices[1]]
+            first_vector = first - self.point
+            second_vector = second - self.point
+            edge_vector = second - first
+            edge_length = float(_np.linalg.norm(edge_vector))
+            if edge_length == 0.0:
+                raise ValueError("junction triangle has a zero-length edge")
+
+            edge_direction = edge_vector / edge_length
+            foot = first - _np.dot(first_vector, edge_direction) * edge_direction
+            height_vector = foot - self.point
+            height = float(_np.linalg.norm(height_vector))
+            if height == 0.0:
+                raise ValueError("junction triangle has zero area")
+
+            cosine = _np.dot(first_vector, second_vector) / (
+                _np.linalg.norm(first_vector) * _np.linalg.norm(second_vector)
+            )
+            angle = float(_np.arccos(_np.clip(cosine, -1.0, 1.0)))
+            total_angle += angle
+            raw_data.append(
+                (
+                    int(element),
+                    junction_local_index,
+                    edge_length,
+                    height,
+                    height_vector / height,
+                    angle,
+                )
+            )
+
+        self.total_surface_angle = total_angle
+        self.triangles = tuple(
+            ChampagneTriangleData(
+                element=element,
+                junction_local_index=local_index,
+                opposite_edge_length=edge_length,
+                height=height,
+                height_direction=height_direction,
+                angle=angle,
+                coefficient=angle / (edge_length * total_angle),
+            )
+            for (
+                element,
+                local_index,
+                edge_length,
+                height,
+                height_direction,
+                angle,
+            ) in raw_data
+        )
+        self._triangle_lookup = {data.element: data for data in self.triangles}
+
+    @property
+    def surface_elements(self):
+        """Return the surface elements supporting this junction basis."""
+        return _np.array(
+            [data.element for data in self.triangles], dtype=_np.uint32
+        )
+
+    def surface_value(self, element, points):
+        """Evaluate the singular surface part of Champagne equation (1)."""
+        data = self._triangle_lookup[int(element)]
+        points = _np.asarray(points, dtype=_np.float64)
+        one_point = points.ndim == 1
+        points = points.reshape(3, -1)
+        displacement = points - self.point[:, None]
+        height_coordinate = data.height_direction @ displacement
+        if _np.any(_np.isclose(height_coordinate, 0.0, atol=1.0e-14)):
+            raise ValueError("the Champagne basis is singular at the junction")
+        body_basis = displacement / data.height
+        singular_factor = 1.0 - (data.height / height_coordinate) ** 2
+        values = data.coefficient * singular_factor[None, :] * body_basis
+        return values[:, 0] if one_point else values
+
+    def surface_divergence(self, element):
+        """Return the constant regular divergence on one fan triangle."""
+        data = self._triangle_lookup[int(element)]
+        return 2.0 * data.coefficient / data.height
+
+    def wire_value(self, distance_from_junction):
+        """Evaluate the outward wire rooftop on the attached segment."""
+        distance = _np.asarray(distance_from_junction, dtype=_np.float64)
+        if _np.any(distance < 0.0) or _np.any(distance > self.wire_length):
+            raise ValueError("wire coordinate lies outside the junction segment")
+        shape = 1.0 - distance / self.wire_length
+        return self.wire_direction[:, None] * _np.atleast_1d(shape)[None, :]
+
+    @property
+    def wire_divergence(self):
+        """Return the axial divergence from Champagne equation (3)."""
+        return -1.0 / self.wire_length
+
+    @property
+    def integrated_surface_divergence(self):
+        """Return the regular surface flux, equal to one by construction."""
+        return sum(data.flux_weight for data in self.triangles)
+
+    @property
+    def integrated_wire_divergence(self):
+        """Return the integrated wire divergence, equal to minus one."""
+        return self.wire_divergence * self.wire_length
+
+    @property
+    def charge_balance(self):
+        """Return the net integrated divergence of the composite basis."""
+        return (
+            self.integrated_surface_divergence
+            + self.integrated_wire_divergence
+        )
+
+
+def find_champagne_junctions(surface_grid, wire_grid, tolerance=1.0e-12):
+    """Find wire endpoints coincident with vertices of a triangle grid."""
+    if tolerance <= 0.0:
+        raise ValueError("tolerance must be positive")
+
+    wire_valence = _np.zeros(wire_grid.number_of_vertices, dtype=_np.int32)
+    for vertex in wire_grid.elements.ravel():
+        wire_valence[vertex] += 1
+
+    junctions = []
+    for wire_vertex in _np.flatnonzero(wire_valence == 1):
+        point = wire_grid.vertices[:, wire_vertex]
+        distances = _np.linalg.norm(surface_grid.vertices - point[:, None], axis=0)
+        matches = _np.flatnonzero(distances <= tolerance)
+        if len(matches) == 0:
+            continue
+        if len(matches) > 1:
+            raise ValueError("wire endpoint matches multiple surface vertices")
+        wire_elements = _np.flatnonzero(
+            _np.any(wire_grid.elements == wire_vertex, axis=0)
+        )
+        junctions.append(
+            ChampagneJunction(
+                surface_grid,
+                wire_grid,
+                surface_vertex=int(matches[0]),
+                wire_vertex=int(wire_vertex),
+                wire_element=int(wire_elements[0]),
+            )
+        )
+
+    return junctions

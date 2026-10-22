@@ -23,7 +23,14 @@ def straight_wire_grid(number_of_elements, length=4.0, wire_radius=0.01):
     return LineGrid(vertices, elements, wire_radius=wire_radius)
 
 
-def delta_gap_load(grid, space, feed_coordinate=0.0, axis=2):
+def delta_gap_load(
+    grid,
+    space,
+    feed_coordinate=0.0,
+    axis=2,
+    domain_index=None,
+    amplitude=1.0,
+):
     """Return the Galerkin load for a unit point source at the feed.
 
     For a delta-gap source, the right-hand side is ``b_i = phi_i(z_feed)``.
@@ -39,6 +46,11 @@ def delta_gap_load(grid, space, feed_coordinate=0.0, axis=2):
     feed_found = False
 
     for element in range(grid.number_of_elements):
+        if (
+            domain_index is not None
+            and grid.domain_indices[element] != domain_index
+        ):
+            continue
         start_vertex, end_vertex = grid.elements[:, element]
         start = vertex_coordinates[start_vertex]
         end = vertex_coordinates[end_vertex]
@@ -61,7 +73,7 @@ def delta_gap_load(grid, space, feed_coordinate=0.0, axis=2):
     if not feed_found or not np.any(loading):
         raise ValueError("The feed must lie in the interior of the wire.")
 
-    return loading
+    return amplitude * loading
 
 
 def coefficients_at_vertices(grid, space, coefficients):

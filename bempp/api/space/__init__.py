@@ -5,3 +5,4 @@ can be found at https://bempp.com/handbook/api/function_spaces.html
 """
 
 from .space import function_space
+from .maxwell_spaces import ChampagneJunction, find_champagne_junctions
