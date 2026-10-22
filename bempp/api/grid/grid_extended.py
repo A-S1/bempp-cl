@@ -985,6 +985,25 @@ class LineGrid(ExtendedGrid):
         """Return radii array for each segment."""
         return self._wire_radius
 
+    @wire_radius.setter
+    def wire_radius(self, value):
+        """Set the wire radius and synchronize both Numba grid-data views."""
+        if callable(value):
+            radii = self._evaluate_radius_function(value)
+        elif _np.isscalar(value):
+            radii = _np.full(self.number_of_elements, value, dtype=_np.float64)
+        else:
+            radii = _np.asarray(value, dtype=_np.float64)
+            if radii.shape != (self.number_of_elements,):
+                raise ValueError("wire_radius must have one value per line element")
+
+        if _np.any(radii <= 0.0):
+            raise ValueError("wire_radius values must be positive")
+
+        self._wire_radius[:] = radii
+        self._grid_data_double.wire_radius[:] = radii
+        self._grid_data_single.wire_radius[:] = radii.astype(_np.float32)
+
     def data(self, precision="double"):
         if precision == "double":
             return self._grid_data_double
@@ -1163,10 +1182,13 @@ class LineGrid(ExtendedGrid):
         """Compute radii for each segment or quadrature point."""
         if callable(wire_radius):
             # Evaluate function at segment midpoints (or parametrized points)
-            self._wire_radius = self._evaluate_radius_function(wire_radius)
+            radii = self._evaluate_radius_function(wire_radius)
         else:
             # Constant radius for all segments
-            self._wire_radius = _np.full(self.number_of_elements, wire_radius)
+            radii = _np.full(self.number_of_elements, wire_radius, dtype=_np.float64)
+        if _np.any(radii <= 0.0):
+            raise ValueError("wire_radius values must be positive")
+        self._wire_radius = radii
 
     def _evaluate_radius_function(self, wire_radius):
         """Evaluate radius function at segment midpoints or parametrized positions."""

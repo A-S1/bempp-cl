@@ -21,5 +21,5 @@ optional = ["matplotlib"]
 style = ["pydocstyle", "flake8"]
 test = ["pytest", "pytest-xdist", "bempp-cl[optional]"]
 
-[tool.setuptools]
-packages = ["bempp"]
+[tool.setuptools.packages.find]
+include = ["bempp*"]

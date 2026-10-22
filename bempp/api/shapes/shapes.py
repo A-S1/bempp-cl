@@ -111,8 +111,7 @@ def wire(corners, h=0.1, a=0.1):
     Mesh.Algorithm = 6;
     """
     grid = __generate_grid_from_geo_string(stub)
-    # Now assign the wire radius to the grid.
-    grid._wire_radius = a
+    grid.wire_radius = a
     return grid
 
 

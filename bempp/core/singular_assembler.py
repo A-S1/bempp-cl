@@ -517,7 +517,7 @@ class _SingularQuadratureRuleInterfaceGalerkin(object):
     
 
 
-class _SingularQuadratureRuleInterface1D(object):
+class _LegacySingularQuadratureRuleInterface1D(object):
     def __init__(self, grid, order, test_support, trial_support):
         self._grid  = grid
         self._order = order
@@ -620,3 +620,64 @@ class _SingularQuadratureRuleInterface1D(object):
         ]
         return arrays
 
+
+class _SingularQuadratureRuleInterface1D(object):
+    """Tensor-product quadrature for radius-regularized line self terms."""
+
+    def __init__(self, grid, order, test_support, trial_support):
+        self._grid = grid
+        self._order = order
+        self._coincident_rule = line_rule(order)
+        self._coincident_indices = _np.flatnonzero(test_support * trial_support)
+        self._index_count = {
+            "coincident": len(self._coincident_indices),
+            "all": len(self._coincident_indices),
+        }
+
+    @property
+    def index_count(self):
+        return self._index_count
+
+    @property
+    def trial_indices(self):
+        return self._coincident_indices
+
+    @property
+    def test_indices(self):
+        return self._coincident_indices
+
+    def get_arrays(self):
+        points, weights_1d = self._coincident_rule
+        number_of_1d_points = len(points)
+        coordinate = _np.repeat(points, number_of_1d_points)
+        relative_distance = _np.tile(points, number_of_1d_points)
+        base_weights = _np.repeat(weights_1d, number_of_1d_points) * _np.tile(
+            weights_1d, number_of_1d_points
+        )
+        offset = (1.0 - coordinate) * relative_distance
+        triangle_weights = base_weights * (1.0 - coordinate)
+
+        # Split the reference square at the diagonal. In both triangles the
+        # radius-regularized peak lies at relative_distance=0, where Gauss
+        # points cluster as the order grows.
+        test_points = _np.hstack([coordinate + offset, coordinate])
+        trial_points = _np.hstack([coordinate, coordinate + offset])
+        weights = _np.hstack([triangle_weights, triangle_weights])
+
+        pair_count = self._index_count["all"]
+        offsets = _np.zeros(pair_count, dtype="uint32")
+        number_of_quad_points = _np.full(
+            pair_count, len(weights), dtype="uint32"
+        )
+
+        return [
+            test_points,
+            trial_points,
+            weights,
+            self._coincident_indices,
+            self._coincident_indices,
+            offsets,
+            offsets.copy(),
+            offsets.copy(),
+            number_of_quad_points,
+        ]
